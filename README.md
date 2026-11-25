@@ -18,7 +18,8 @@ what an inbound detector needs and an authorisation log cannot give:
 2. **Spec-derived novel paths** — a path whose first appearance follows a fetch
    of an API/spec document within 60 s, one path per document.
 3. **Credential and probe rules** — five rejected credentials on one endpoint in
-   a minute, twenty-five distinct paths answering 4xx.
+   a minute, twenty-five distinct paths answering 4xx, forty distinct paths in a
+   minute whatever the status.
 4. **Corroboration** — the two document rules only count when the same address
    also failed an auth check. Reading the spec is not an attack; failing the
    check right after is. This is the discriminator the incident report named.
@@ -75,10 +76,24 @@ For nginx: `log_format ... escape=json` gives this shape directly; a combined lo
 needs no change at all.
 
 **Deny list.** `--deny-map` writes `deny <ip>;` lines with a comment per entry
-carrying `expires=<epoch>`; `--deny-json` writes the same as data. Addresses that
-are not global unicast (loopback, RFC1918, link-local, documentation ranges) are
-skipped and reported, because blocking them takes the service down instead of
-the intruder. `--ignore <ip>` (repeatable) keeps your own scanner out.
+carrying `expires=<epoch>`; `--deny-json` writes the same as data. Three gates
+before an address is blocked:
+
+1. **Global unicast only** — loopback, RFC1918, link-local and documentation
+   ranges are skipped and reported: blocking them takes the service down.
+2. **Evidence, not volume** — `velocity`, `wide_probe`, `path_burst` and
+   `low_and_slow_scan` fire on shared egress (a CDN, a corporate NAT), so they
+   alert but do not deny. Denial needs a canary, probed or rejected credentials,
+   two independent behaviours, or one behaviour plus five failed requests.
+   `--deny-unsafe` opts into volume-based blocking.
+3. **Expiry in the file** — a cron that re-runs `watch` both adds and removes.
+
+`--ignore <ip>` (repeatable) keeps your own scanner out.
+
+**Time.** The window is measured against the **newest row in the file**, not the
+wall clock, so a log written yesterday is still analysed. `--now wall` for live
+tailing, `--now <epoch>` for a fixed cut-off. An empty or unparsable file exits
+**3** and says `no rows` — it never reports "clean".
 
 ## Rules and weights
 
@@ -91,6 +106,7 @@ the intruder. `--ignore <ip>` (repeatable) keeps your own scanner out.
 | `docs_link_follow` | 3 | request whose Referer is an API/spec document |
 | `read_after_submit` | 2 | repeated GETs refused by submit-only endpoints |
 | `ua_flip` | 2 | same address claims desktop and mobile within 5 min |
+| `path_burst` | 3 | 40+ distinct paths in 60 s, whatever the status (search bots excluded) |
 | `wide_probe` | 2 | 25+ distinct paths answering 4xx |
 | `tool_switch` | 2 | browser then curl/wget/httpx from one address within 15 min |
 | `low_and_slow_scan` | 2 | 10+ paths answering 4xx with a single UA |
@@ -119,7 +135,7 @@ python3 tools/measure.py --corpus corpus
 |---|---|
 | 300 benign sessions (readers, doc readers, developers on `curl`, crawlers, API clients, monitoring) | **0 flagged**, at any level |
 | 60 attack sessions (incident replay, key prober, slow scanner, docs crawler) | **45 high**, **60 medium or higher** |
-| this server's nginx log: 4,048 requests, 238 sources | 4 flagged ≥ medium, **0 proven false positives**, 3 confirmed WordPress probing |
+| this server's nginx log: 4,048 requests, 238 sources | 5 flagged ≥ medium, **0 proven false positives**, 3 confirmed WordPress probing + a 770-path scanner that answers only 301 |
 
 Method, per-family tables and the four changes the measurement forced (including
 `tool_switch` dropping from 3 to 2 because it flagged 50 of 300 benign sessions)
@@ -132,10 +148,12 @@ commands reproduces every number.
 python -m pytest -q tests/
 ```
 
-32 tests: the reported timeline scores **high** with all four decisive rules; a
+45 tests: the reported timeline scores **high** with all four decisive rules; a
 canary in the same log is **critical**; a developer switching to `curl` stays
 **low**; a doc reader without a failed check is suppressed; one document unlocks
-one path; loopback is never denied; combined and JSONL logs agree.
+one path; a redirect-heavy scan is caught without any 4xx; a search bot is not a
+burst; loopback is never denied; volume evidence alone never denies; a log from
+yesterday is still analysed; combined and JSONL logs agree.
 
 ## What this is not
 

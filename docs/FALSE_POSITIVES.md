@@ -56,7 +56,7 @@ python3 -m tripwire watch --log /var/log/nginx/access.log \
 |---|---|
 | requests in the file | 4,048 |
 | distinct sources | 238 |
-| flagged medium or higher | 4 |
+| flagged medium or higher | 5 |
 | flagged high | 1 |
 | proven false positives | **0** |
 
@@ -68,6 +68,9 @@ Manual labels for the four:
   All three medium (`ua_flip` + `velocity`). Confirmed probing, not customers.
   They answer `301`, not `401`, so the credential rule cannot fire — the UA flip
   is what caught them.
+- `14.102.84.54` — 770 requests over four minutes against one vhost, 184 per
+  minute, every answer a `301`. No 4xx anywhere, so the 4xx rules never fire;
+  `path_burst` catches it at **medium** (this is the case that motivated the rule).
 - `127.0.0.1` — our own scanner. High, and **excluded from the deny list**
   because a loopback address is never blockable.
 
@@ -84,6 +87,10 @@ All four changes came from corpus runs, not from taste.
 | document rules need **corroboration** | `docs_link_follow` + `spec_derived_novel_path` = 6 points = high for anyone reading the spec. They now count only if the same address also produced a `401`/`403` in the window, or a canary fired. This is the exact discriminator in the reported intrusion. |
 | one document unlocks **one** path | before, a single request to a doc-ish path made every new path in the next 60 s "spec-derived"; a scanner walking 300 paths produced ~300 findings. The incident shape is one document → one followed link. |
 | failed document fetch does **not** unlock | a `403` on `/docs/api.md` is not a document we served, so nothing can be derived from it. |
+| `path_burst` added (40 paths/min, status-independent) | a scanner behind a redirect-heavy vhost answers `301` to everything and scored 1 point on this server's own log. Search crawlers are excluded by user agent, so the corpus `crawler` family stays at 0 false positives. |
+| the window is measured against the file, not the clock | `--window 600` on a log from yesterday produced `0 sources, 0 flagged, exit 0` — a clean bill of health for a file that was never read. The default `now` is now the newest row; an empty file exits 3. |
+| a canary opens its own case | a canary hit whose row fell outside the window was counted in `canary_hits` but produced no session, so `flagged` stayed 0. The hit now synthesises a session at `critical`. |
+| timezone from `timegm`, not `mktime` | `mktime` shifted every parsed line by the host's UTC offset (1 h here, 2 h across DST) and silently moved rows in and out of the window. |
 
 ## 4. Deny-list safety
 
@@ -94,6 +101,12 @@ per-entry expiry. Before writing, each address is checked with
 - loopback, private, link-local, multicast and documentation ranges are **never**
   denied; they are listed in the file as `# skipped <ip> (<reason>)`;
 - `--ignore 198.51.100.9` (repeatable) keeps your own scanner out of the list;
+- **volume rules never deny.** `velocity`, `wide_probe`, `path_burst` and
+  `low_and_slow_scan` fire on shared egress — a CDN, a corporate NAT, a hospital
+  with one line. Denial needs a canary, probed or rejected credentials, two
+  independent behaviours, or one behaviour plus five failures; otherwise the
+  address is alerted and reported as `volume evidence only`. `--deny-unsafe`
+  overrides, deliberately named;
 - the list is meant to be rewritten on a timer — expiry is in the file, so a cron
   both adds and removes entries.
 
@@ -112,3 +125,8 @@ per-entry expiry. Before writing, each address is checked with
 - `slow_scanner` lands on medium. Raising it to high would require calling every
   slow 404 walk an incident; the deny threshold defaults to medium instead.
 - Thresholds are global, not per-API. Per-path baselines are future work.
+- Denial is deliberately conservative: on this server's real log, **zero**
+  addresses qualify (the three WordPress probes answer `301`, so no credential
+  failure is visible; one behaviour plus volume is not enough). That is the
+  designed behaviour, not a bug — `--deny-unsafe` exists for operators who
+  accept the CDN risk.

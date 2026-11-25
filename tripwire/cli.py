@@ -39,6 +39,10 @@ def main(argv=None) -> int:
     p_watch.add_argument("--deny-json", dest="deny_json", default=None,
                          help="write the same list as JSON, with expiry per entry")
     p_watch.add_argument("--deny-ttl", dest="deny_ttl", type=int, default=3600)
+    p_watch.add_argument("--now", default="file",
+                         help="'file' (default: newest row), 'wall', or an epoch")
+    p_watch.add_argument("--deny-unsafe", dest="deny_unsafe", action="store_true",
+                         help="also deny on volume evidence alone (CDN/NAT risk)")
     p_watch.add_argument("--ignore", action="append", default=None,
                          help="address never to deny (repeatable, e.g. your scanner)")
 
@@ -69,13 +73,24 @@ def main(argv=None) -> int:
 
     if a.cmd == "watch":
         registry = canary.load(a.registry) if a.registry else {"canaries": []}
-        res = detect.watch(a.log, registry, a.window, a.ledger, a.format)
+        now = None
+        if a.now == "wall":
+            import time as _time
+            now = _time.time()
+        elif a.now not in ("file", ""):
+            try:
+                now = float(a.now)
+            except ValueError:
+                _emit({"error": "Usage", "message": "--now takes 'file', 'wall' or an epoch"}, None)
+                return 2
+        res = detect.watch(a.log, registry, a.window, a.ledger, a.format, now=now)
         order = {"low": 0, "medium": 1, "high": 2, "critical": 3}
         floor = order[a.min_level]
         flagged = {ip: s for ip, s in res["sessions"].items()
                    if order.get(s["level"], 0) >= floor}
         deny = detect.deny_list(res, a.min_level, ttl_s=a.deny_ttl,
-                                ignore=set(a.ignore or ()))
+                                ignore=set(a.ignore or ()),
+                                allow_volume=a.deny_unsafe)
         for path, payload in ((a.deny_map, deny["nginx"]), (a.deny_json, None)):
             if not path:
                 continue
@@ -84,7 +99,11 @@ def main(argv=None) -> int:
                     json.dump(deny["json"], fh, indent=1, sort_keys=True)
                 else:
                     fh.write(payload)
-        _emit({"sources": res["sources"], "flagged": len(flagged),
+        if res.get("empty"):
+            _emit({"sources": 0, "flagged": 0, "rows": 0,
+                   "error": "no rows", "message": "the file has no parsable lines"}, None)
+            return 3
+        _emit({"sources": res["sources"], "rows": res.get("rows"), "flagged": len(flagged),
                "canary_hits": len(res["canary_hits"]),
                "spec_derived_paths": len(res["spec_derived_paths"]),
                "deny_entries": deny["count"],

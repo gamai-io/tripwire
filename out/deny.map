@@ -1,8 +1,6 @@
-# tripwire deny list, generated 2026-11-25T09:28:33Z, ttl 3600s
-# 116.203.51.159 medium points=3 expires=1795602513 rules=ua_flip,velocity
-deny 116.203.51.159;
-# 16.170.14.81 medium points=3 expires=1795602513 rules=ua_flip,velocity
-deny 16.170.14.81;
-# 171.226.11.20 medium points=3 expires=1795602513 rules=ua_flip,velocity
-deny 171.226.11.20;
+# tripwire deny list, generated 2026-11-25T09:40:53Z, ttl 3600s
+# skipped 116.203.51.159 (volume evidence only (ua_flip,velocity))
 # skipped 127.0.0.1 (not a global address)
+# skipped 14.102.84.54 (volume evidence only (path_burst,velocity))
+# skipped 16.170.14.81 (volume evidence only (ua_flip,velocity))
+# skipped 171.226.11.20 (volume evidence only (ua_flip,velocity))

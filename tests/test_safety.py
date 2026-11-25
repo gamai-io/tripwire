@@ -97,6 +97,25 @@ class Weights(unittest.TestCase):
         self.assertEqual(res["sessions"]["81.2.3.4"]["level"], "high")
 
 
+class PathBurst(unittest.TestCase):
+    def _scan(self, ua, count=50, status=301):
+        return [row(NOW - 60 + i, "/p/%d.php" % i, status, ua=ua) for i in range(count)]
+
+    def test_a_redirect_heavy_scan_is_caught_without_any_4xx(self) -> None:
+        rows = self._scan(CURL)
+        res = detect.analyse(rows, now=NOW)
+        session = res["sessions"]["81.2.3.4"]
+        self.assertIn("path_burst", {f["rule"] for f in session["findings"]})
+        self.assertGreaterEqual(session["points"], 3)
+
+    def test_a_search_crawler_is_not_a_burst(self) -> None:
+        ua = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
+        self.assertEqual(detect.path_burst(self._scan(ua)), [])
+
+    def test_below_the_threshold_nothing_fires(self) -> None:
+        self.assertEqual(detect.path_burst(self._scan(CURL, count=20)), [])
+
+
 class DenySafety(unittest.TestCase):
     def _result(self, ip: str) -> dict:
         return {"sessions": {ip: {"level": "high", "points": 9,
@@ -115,6 +134,34 @@ class DenySafety(unittest.TestCase):
         self.assertEqual(res["count"], 1)
         self.assertEqual(res["entries"][0]["expires"], int(NOW + 600))
         self.assertIn("deny 8.8.4.4;", res["nginx"])
+
+    def test_volume_evidence_alone_does_not_deny(self) -> None:
+        result = {"sessions": {"8.8.4.4": {"level": "medium", "points": 4,
+                                           "findings": [{"rule": "velocity"},
+                                                        {"rule": "wide_probe"}]}},
+                  "evidence": {"8.8.4.4": {"failures": 0}}}
+        res = detect.deny_list(result)
+        self.assertEqual(res["count"], 0)
+        self.assertIn("volume", res["skipped"][0]["why"])
+
+    def test_two_behaviours_do_deny(self) -> None:
+        result = {"sessions": {"8.8.4.4": {"level": "high", "points": 8,
+                                           "findings": [{"rule": "ua_flip"},
+                                                        {"rule": "tool_switch"}]}},
+                  "evidence": {"8.8.4.4": {"failures": 0}}}
+        self.assertEqual(detect.deny_list(result)["count"], 1)
+
+    def test_one_behaviour_with_failures_does_deny(self) -> None:
+        result = {"sessions": {"8.8.4.4": {"level": "high", "points": 6,
+                                           "findings": [{"rule": "ua_flip"}]}},
+                  "evidence": {"8.8.4.4": {"failures": 7}}}
+        self.assertEqual(detect.deny_list(result)["count"], 1)
+
+    def test_the_operator_can_opt_into_volume_denial(self) -> None:
+        result = {"sessions": {"8.8.4.4": {"level": "medium", "points": 4,
+                                           "findings": [{"rule": "velocity"}]}},
+                  "evidence": {"8.8.4.4": {"failures": 0}}}
+        self.assertEqual(detect.deny_list(result, allow_volume=True)["count"], 1)
 
     def test_an_ignored_address_is_reported_not_denied(self) -> None:
         res = detect.deny_list(self._result("8.8.4.4"), ignore={"8.8.4.4"})

@@ -171,6 +171,15 @@ def analyse(rows: list[dict], registry: dict | None = None, window: int = 600,
             session["points"] += 4
             session["level"] = _level(session["points"])
 
+    for item in path_burst(rows):
+        session = base["sessions"].get(item["ip"])
+        if session is not None:
+            session["findings"].append({
+                "rule": "path_burst", "points": 3,
+                "detail": "%d distinct paths in %ds" % (item["paths"], item["seconds"])})
+            session["points"] += 3
+            session["level"] = _level(session["points"])
+
     for item in wide_probe(rows):
         session = base["sessions"].get(item["ip"])
         if session is not None:
@@ -181,7 +190,13 @@ def analyse(rows: list[dict], registry: dict | None = None, window: int = 600,
             session["level"] = _level(session["points"])
 
     for hit in canary_hits:
-        session = base["sessions"].get(str(hit["ip"]))
+        ip = str(hit["ip"])
+        session = base["sessions"].get(ip)
+        if session is None:      # a canary alone is enough to open a case
+            session = base["sessions"][ip] = {"points": 0, "level": "low",
+                                              "findings": [], "requests": 0,
+                                              "first_ts": hit.get("ts"),
+                                              "last_ts": hit.get("ts")}
         if session is not None:
             session["findings"].append({
                 "rule": "canary_used", "points": 10,
@@ -202,7 +217,15 @@ def analyse(rows: list[dict], registry: dict | None = None, window: int = 600,
         hit = any(str(h["ip"]) == ip for h in canary_hits)
         _corroborate(session, _failed_here(by_ip.get(ip, [])), hit)
 
-    return {"window_s": window, "sources": base["sources"],
+    evidence = {}
+    for ip, items in by_ip.items():
+        evidence[ip] = {
+            "requests": len(items),
+            "failures": sum(1 for r in items if int(r.get("status") or 0) in FAILED),
+            "user_agents": len({str(r.get("ua") or "") for r in items}),
+        }
+
+    return {"window_s": window, "sources": base["sources"], "evidence": evidence,
             "flagged": sum(1 for s in base["sessions"].values() if s["level"] != "low"),
             "canary_hits": canary_hits, "spec_derived_paths": spec_derived_paths(rows),
             "auth_failure_streaks": auth_failure_streak(rows),
@@ -210,9 +233,21 @@ def analyse(rows: list[dict], registry: dict | None = None, window: int = 600,
 
 
 def watch(log_path: str, registry: dict | None = None, window: int = 600,
-          ledger: str | None = None, fmt: str = "auto") -> dict:
+          ledger: str | None = None, fmt: str = "auto",
+          now: float | None = None) -> dict:
+    """Score a file.
+
+    `now` defaults to the newest row in the file, so a log written yesterday is
+    still analysed instead of silently producing "0 sources, 0 flagged". Pass
+    `now=time.time()` for live tailing.
+    """
     rows = logread.load(log_path, fmt)
-    result = analyse(rows, registry, window)
+    if now is None and rows:
+        now = max(float(r.get("ts") or 0) for r in rows) + 1
+    result = analyse(rows, registry, window, now=now)
+    result["rows"] = len(rows)
+    result["empty"] = not rows
+    result["now"] = now
     if ledger:
         alerts = {ip: s for ip, s in result["sessions"].items() if s["level"] != "low"}
         if alerts:
@@ -239,8 +274,70 @@ def _blockable(ip: str) -> bool:
         return False
 
 
+GOOD_BOTS = ("googlebot", "bingbot", "duckduckbot", "yandexbot", "applebot",
+             "facebookexternalhit", "twitterbot", "linkedinbot", "uptime")
+
+
+def path_burst(rows: list[dict], threshold: int = 40, within: float = 60.0) -> list[dict]:
+    """Many *first-seen* paths in a minute, whatever the status code.
+
+    Status-independent on purpose: a scanner behind a redirect-heavy vhost
+    answers 301 to everything and never trips the 4xx rules.
+    """
+    by_ip = defaultdict(list)
+    for row in rows:
+        ua = str(row.get("ua") or "").lower()
+        if any(bot in ua for bot in GOOD_BOTS):
+            continue
+        by_ip[str(row.get("ip") or "?")].append((float(row.get("ts") or 0),
+                                                 str(row.get("path") or "")))
+    out = []
+    for ip, items in by_ip.items():
+        items.sort()
+        seen: set[str] = set()
+        window: list[float] = []
+        for ts, path in items:
+            window = [t for t in window if ts - t <= within]
+            window.append(ts)
+            if path not in seen:
+                seen.add(path)
+                distinct = len({p for t, p in items if t in window})
+                if distinct >= threshold:
+                    out.append({"ip": ip, "paths": distinct, "seconds": int(within)})
+                    break
+    return out
+
+
+IDENTITY_RULES = {"canary_used", "key_probing", "auth_failure_streak"}
+BEHAVIOUR_RULES = {"ua_flip", "tool_switch", "docs_link_follow",
+                   "spec_derived_novel_path", "read_after_submit"}
+
+
+def deny_evidence(session: dict, evidence: dict | None) -> tuple[bool, str]:
+    """Blocking an address is a bigger decision than alerting on it.
+
+    Volume rules (`velocity`, `wide_probe`, `low_and_slow_scan`) fire on shared
+    egress — a CDN, a corporate NAT, a hospital with one line — so they can alert
+    but not deny. Denial needs identity evidence (canary, probed or rejected
+    credentials), two independent behaviours, or one behaviour plus real failures.
+    """
+    rules = {f["rule"] for f in session.get("findings") or [] if not f.get("suppressed")}
+    if "canary_used" in rules:
+        return True, "canary"
+    if rules & IDENTITY_RULES:
+        return True, "identity evidence: %s" % ",".join(sorted(rules & IDENTITY_RULES))
+    behaviours = rules & BEHAVIOUR_RULES
+    failures = int((evidence or {}).get("failures") or 0)
+    if len(behaviours) >= 2:
+        return True, "two behaviours: %s" % ",".join(sorted(behaviours))
+    if behaviours and failures >= 5:
+        return True, "behaviour + %d failed requests" % failures
+    return False, "volume evidence only (%s)" % (",".join(sorted(rules)) or "none")
+
+
 def deny_list(result: dict, min_level: str = "medium", now: float | None = None,
-              ttl_s: int = 3600, ignore: set[str] | None = None) -> dict:
+              ttl_s: int = 3600, ignore: set[str] | None = None,
+              allow_volume: bool = False) -> dict:
     """Turn findings into an edge block list (nginx `deny` lines + JSON entries).
 
     The list is meant to be rewritten on a timer: every entry carries the epoch
@@ -260,16 +357,20 @@ def deny_list(result: dict, min_level: str = "medium", now: float | None = None,
             skipped.append({"ip": ip, "level": session["level"],
                             "why": "ignored" if ip in ignore else "not a global address"})
             continue
+        ok, why = deny_evidence(session, (result.get("evidence") or {}).get(ip))
+        if not ok and not allow_volume:
+            skipped.append({"ip": ip, "level": session["level"], "why": why})
+            continue
         entries.append({"ip": ip, "level": session["level"], "points": session["points"],
-                        "expires": int(moment + ttl_s),
+                        "reason": why, "expires": int(moment + ttl_s),
                         "rules": sorted({f["rule"] for f in session["findings"]
                                          if not f.get("suppressed")})})
     lines = ["# tripwire deny list, generated %s, ttl %ds"
              % (time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(moment)), ttl_s)]
     for entry in entries:
-        lines.append("# %s %s points=%d expires=%d rules=%s"
+        lines.append("# %s %s points=%d expires=%d rules=%s reason=%s"
                      % (entry["ip"], entry["level"], entry["points"], entry["expires"],
-                        ",".join(entry["rules"])))
+                        ",".join(entry["rules"]), entry["reason"]))
         lines.append("deny %s;" % entry["ip"])
     for item in skipped:
         lines.append("# skipped %s (%s)" % (item["ip"], item["why"]))

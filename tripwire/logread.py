@@ -7,9 +7,9 @@ value, which is what the key-probing rule needs).
 """
 from __future__ import annotations
 
+import calendar
 import json
 import re
-import time
 
 COMBINED = re.compile(
     r'^(?P<ip>\S+) \S+ (?P<user>\S+) \[(?P<ts>[^\]]+)\] '
@@ -29,8 +29,8 @@ def _parse_time(text: str) -> float | None:
         year, hour, minute, second = rest.split(":")
         sign = -1 if zone.startswith("-") else 1
         offset = int(zone[1:3]) * 3600 + int(zone[3:5]) * 60
-        stamp = time.mktime((int(year), _MONTHS[month], int(day),
-                             int(hour), int(minute), int(second), 0, 0, -1))
+        stamp = calendar.timegm((int(year), _MONTHS[month], int(day),
+                                 int(hour), int(minute), int(second), 0, 0, 0))
         return stamp - sign * offset
     except (ValueError, KeyError, IndexError):
         return None
