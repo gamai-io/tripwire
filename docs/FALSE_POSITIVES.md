@@ -128,7 +128,20 @@ per-entry expiry. Before writing, each address is checked with
 - the list is meant to be rewritten on a timer — expiry is in the file, so a cron
   both adds and removes entries.
 
-## 5. Limits, stated plainly
+## 5. Scans spread across addresses
+
+Per-address rules are blind to two requests per address from a thousand addresses.
+`path_baseline_anomaly` compares the distinct-source count on a path template
+(`/api/v1/invoices/8812` → `/api/v1/invoices/{}`) with an EWMA of its own history.
+
+- 4 clean windows of 5 sources, then 70 sources on one path → **1 anomaly**, and
+  the anomalous window is **not** folded into the history (`tests/test_baseline.py`).
+- it reports the path, not the addresses: blaming individual addresses on a shared
+  endpoint is how a detector blocks a CDN.
+- it needs warm-up; a path seen for the first time is never an anomaly, and the
+  factor (default 3x) plus a floor (default 10 sources) are per-deployment knobs.
+
+## 6. Limits, stated plainly
 
 - The synthetic corpus is a model of traffic, not traffic. It shows the rules do
   what they say on the shapes they were designed for; it cannot prove behaviour

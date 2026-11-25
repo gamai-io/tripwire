@@ -36,6 +36,7 @@ from collections import defaultdict
 from mandate import agentwatch
 from mandate.core import append_receipt
 
+from . import baseline as baseline_mod
 from . import canary as canary_mod
 from . import logread
 
@@ -279,9 +280,40 @@ def analyse(rows: list[dict], registry: dict | None = None, window: int = 600,
             "sessions": base["sessions"]}
 
 
+def watch_rows(rows: list[dict], registry: dict | None = None, window: int = 600,
+               now: float | None = None, baseline_path: str = "",
+               baseline_factor: float = 3.0, baseline_floor: int = 10,
+               baseline_update: bool = True) -> dict:
+    """Score rows you already have (tests, notebooks, another collector)."""
+    result = analyse(rows, registry, window, now=now)
+    _apply_baseline(result, rows, baseline_path, baseline_factor, baseline_floor,
+                    baseline_update)
+    result["rows"] = len(rows)
+    result["empty"] = not rows
+    return result
+
+
+def _apply_baseline(result: dict, rows: list[dict], path: str, factor: float,
+                    floor: int, update: bool) -> None:
+    if not path:
+        result["path_anomalies"] = []
+        return
+    history = baseline_mod.load(path)
+    found = baseline_mod.anomalies(rows, history, factor, floor)
+    result["path_anomalies"] = found
+    if update:
+        flagged = {item["path"] for item in found}
+        clean = [r for r in rows
+                 if baseline_mod.template(str(r.get("path") or "/")) not in flagged]
+        baseline_mod.update(clean, history)
+        baseline_mod.save(path, history)
+
+
 def watch(log_path: str, registry: dict | None = None, window: int = 600,
           ledger: str | None = None, fmt: str = "auto",
-          now: float | None = None, trusted: list | None = None) -> dict:
+          now: float | None = None, trusted: list | None = None,
+          baseline_path: str = "", baseline_factor: float = 3.0,
+          baseline_floor: int = 10, baseline_update: bool = True) -> dict:
     """Score a file.
 
     `now` defaults to the newest row in the file, so a log written yesterday is
@@ -292,11 +324,20 @@ def watch(log_path: str, registry: dict | None = None, window: int = 600,
     if now is None and rows:
         now = max(float(r.get("ts") or 0) for r in rows) + 1
     result = analyse(rows, registry, window, now=now)
+    _apply_baseline(result, rows, baseline_path, baseline_factor, baseline_floor,
+                    baseline_update)
+
     result["rows"] = len(rows)
     result["skipped_lines"] = stats.get("skipped", 0)
     result["log_format"] = stats.get("format")
     result["empty"] = not rows
     result["now"] = now
+    if ledger and result.get("path_anomalies"):
+        append_receipt(ledger, {"v": 1, "type": "control", "action": "alert",
+                                "actor": "tripwire", "kind": "path_anomaly",
+                                "reason": "distributed scan across sources",
+                                "ts": time.time(), "log": log_path,
+                                "paths": result["path_anomalies"]})
     if ledger:
         alerts = {ip: s for ip, s in result["sessions"].items() if s["level"] != "low"}
         if alerts:

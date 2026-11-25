@@ -108,6 +108,18 @@ never rewrites firewall state itself. Three gates before an address is blocked:
 
 `--ignore <ip>` (repeatable) keeps your own scanner out.
 
+**A scan spread across many addresses.** Per-address rules cannot see it. Keep a
+per-path history and the endpoint's own baseline catches it:
+
+```bash
+tripwire watch --log access.jsonl --window 600 \
+        --baseline /var/lib/tripwire/baseline.json --baseline-factor 3 --baseline-floor 10
+```
+
+Anomalies are reported per **path**, not per address, and a window that trips the
+baseline is **not** folded into the history, so an attack cannot normalise itself.
+It needs a few clean runs first; a cold path is never an alarm.
+
 **Not shouting every minute.** A cron that re-runs `watch` over the same file
 needs `--state`:
 
@@ -132,6 +144,7 @@ tailing, `--now <epoch>` for a fixed cut-off. An empty or unparsable file exits
 | rule | points | what it sees |
 |---|---|---|
 | `canary_used` | 10 | a planted key was sent — **critical on its own** |
+| `path_baseline_anomaly` | report | a path whose distinct-source count is 3x its own history (needs `--baseline`) |
 | `key_across_addresses` | 3–6 | one credential from 3+ addresses **and** 5+ rejected requests (6 when 6+ addresses or 20+ rejections) |
 | `key_probing` | 4 | 3+ distinct auth values (or none) on one path within 60 s |
 | `auth_failure_streak` | 4 | 5+ rejected credentials on one endpoint within 60 s |
@@ -197,7 +210,7 @@ and what is deliberately missing are in
 python -m pytest -q tests/
 ```
 
-75 tests: the reported timeline scores **high** with all four decisive rules; a
+85 tests: the reported timeline scores **high** with all four decisive rules; a
 canary in the same log is **critical**; a developer switching to `curl` stays
 **low**; a doc reader without a failed check is suppressed; one document unlocks
 one path; a redirect-heavy scan is caught without any 4xx; a search bot is not a

@@ -43,6 +43,14 @@ def main(argv=None) -> int:
     p_watch.add_argument("--deny-ttl", dest="deny_ttl", type=int, default=3600)
     p_watch.add_argument("--now", default="file",
                          help="'file' (default: newest row), 'wall', or an epoch")
+    p_watch.add_argument("--baseline", default=None,
+                         help="JSON file with per-path history; enables distributed-scan "
+                              "detection and is updated after a clean run")
+    p_watch.add_argument("--baseline-factor", dest="baseline_factor", type=float,
+                         default=3.0)
+    p_watch.add_argument("--baseline-floor", dest="baseline_floor", type=int, default=10)
+    p_watch.add_argument("--no-baseline-update", dest="baseline_update",
+                         action="store_false", default=True)
     p_watch.add_argument("--state", default=None,
                          help="JSON file remembering alerts, so a cron does not repeat them")
     p_watch.add_argument("--state-ttl", dest="state_ttl", type=int, default=3600)
@@ -105,7 +113,11 @@ def main(argv=None) -> int:
                 return 2
         try:
             res = detect.watch(a.log, registry, a.window, a.ledger, a.format, now=now,
-                               trusted=a.trusted_proxy)
+                               trusted=a.trusted_proxy,
+                               baseline_path=a.baseline or "",
+                               baseline_factor=a.baseline_factor,
+                               baseline_floor=a.baseline_floor,
+                               baseline_update=a.baseline_update)
         except OSError as exc:
             _emit({"error": "Unreadable", "message": str(exc)})
             return 3
@@ -140,6 +152,7 @@ def main(argv=None) -> int:
                "flagged": len(flagged),
                "canary_hits": len(res["canary_hits"]),
                "spec_derived_paths": len(res["spec_derived_paths"]),
+               "path_anomalies": res.get("path_anomalies", []),
                "deny_entries": deny["count"],
                "new_alerts": res.get("new_alerts", len(flagged)),
                "deny_skipped": len(deny["skipped"]),

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.0 — 2026-11-25
+- `--baseline FILE`: per-path history (EWMA of requests and distinct sources) with
+  path templating, so a scan spread across many addresses is visible at the
+  endpoint that is being walked. Reported per path, never per address; a window
+  that trips the baseline is not folded into the history; a cold path is not an
+  alarm. Anomalies are also written to the ledger (`kind=path_anomaly`).
+- `--baseline-factor` (3x), `--baseline-floor` (10 sources), `--no-baseline-update`.
+- 10 new tests (templating, cold start, burst after warm-up, no poisoning, atomic
+  write, end-to-end through `watch`, ledger record); 85 total.
+
 ## 0.5.0 — 2026-11-25
 - `key_across_addresses`: one credential used from 3+ addresses **and** 5+ rejected
   requests is one actor, not eight innocent ones. 3 points, 6 when 6+ addresses or
