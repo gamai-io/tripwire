@@ -57,8 +57,49 @@ def load(path: str = "canaries.json", strict: bool = False) -> dict:
     return data
 
 
+DECOY = """# Internal API reference (staging)
+
+Base URL: `https://api.internal.example/v1`
+Auth: `Authorization: Bearer {token}`
+
+Endpoints:
+
+- `GET /v1/accounts` - list accounts for the calling key
+- `GET /v1/invoices` - invoices for a vendor
+- `POST /v1/transfers` - create a transfer (requires a signed approval)
+
+Example:
+
+```bash
+curl -H "Authorization: Bearer {token}" https://api.internal.example/v1/accounts
+```
+
+This document is not linked from the public site.
+"""
+
+
+def plant(tokens: list[str], directory: str, name: str = "api.md") -> list[str]:
+    """Write decoy documents that contain the tokens, ready to copy to a web root.
+
+    The registry keeps only hashes, so the plaintext exists here and nowhere else:
+    whoever plants the file is the only one who can.
+    """
+    os.makedirs(directory, exist_ok=True)
+    written = []
+    stem, extension = os.path.splitext(name)
+    for index, token in enumerate(tokens, start=1):
+        filename = name if len(tokens) == 1 else "%s-%d%s" % (stem, index, extension)
+        target = os.path.join(directory, filename)
+        with open(target, "w", encoding="utf-8") as fh:
+            fh.write(DECOY.format(token=token))
+        os.chmod(target, 0o644)
+        written.append(target)
+    return written
+
+
 def generate(count: int = 3, note: str = "", path: str = "canaries.json",
-             registry: dict | None = None) -> dict:
+             registry: dict | None = None, plant_dir: str = "",
+             plant_name: str = "api.md") -> dict:
     """Add `count` canaries to the registry and return the plaintext tokens once."""
     data = registry if registry is not None else load(path)
     items = list(data.get("canaries") or [])
@@ -71,7 +112,9 @@ def generate(count: int = 3, note: str = "", path: str = "canaries.json",
                       "revoked": False})
     data = {"version": 1, "canaries": items}
     _write(path, data)
-    return {"path": path, "tokens": tokens, "count": len(items)}
+    planted = plant(tokens, plant_dir, plant_name) if plant_dir else []
+    return {"path": path, "tokens": tokens, "count": len(items),
+            "planted": planted}
 
 
 def match(text: str, registry: dict | None) -> list[dict]:
@@ -83,9 +126,11 @@ def match(text: str, registry: dict | None) -> list[dict]:
     if not known:
         return []
     hits = []
+    seen = set()
     for candidate in candidates(text):
         entry = known.get(_hash(candidate))
-        if entry is not None:
+        if entry is not None and entry.get("id") not in seen:
+            seen.add(entry.get("id"))
             hits.append(entry)
     return hits
 

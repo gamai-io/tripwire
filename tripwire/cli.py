@@ -24,6 +24,8 @@ def main(argv=None) -> int:
     p_gen.add_argument("--note", default="")
     p_gen.add_argument("--id", default=None, help="canary id (revoke)")
     p_gen.add_argument("--registry", default="canaries.json")
+    p_gen.add_argument("--plant-dir", dest="plant_dir", default="",
+                       help="also write decoy documents containing the tokens")
 
     p_watch = sub.add_parser("watch", help="score an access log")
     p_watch.add_argument("--log", required=True)
@@ -81,9 +83,10 @@ def main(argv=None) -> int:
 
     if a.cmd == "canary":
         if a.action == "generate":
-            res = canary.generate(a.count, a.note, a.registry)
+            res = canary.generate(a.count, a.note, a.registry,
+                                  plant_dir=a.plant_dir)
             _emit({"registry": res["path"], "count": res["count"],
-                   "tokens": res["tokens"],
+                   "tokens": res["tokens"], "planted": res.get("planted") or [],
                    "note": "shown once: only sha256 is stored, revoke by id"})
             return 0
         if a.action == "list":

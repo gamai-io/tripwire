@@ -63,3 +63,25 @@ class Match(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Planting(unittest.TestCase):
+    def test_tokens_are_written_into_decoy_documents(self) -> None:
+        from tripwire import canary
+        with tempfile.TemporaryDirectory() as td:
+            registry = os.path.join(td, "canaries.json")
+            www = os.path.join(td, "www")
+            res = canary.generate(2, path=registry, plant_dir=www)
+            self.assertEqual(len(res["planted"]), 2)
+            names = sorted(os.listdir(www))
+            self.assertEqual(names, ["api-1.md", "api-2.md"])
+            text = open(os.path.join(www, names[0]), encoding="utf-8").read()
+            self.assertIn(res["tokens"][0], text)
+            self.assertEqual(len(canary.match(text, canary.load(registry))), 1)
+
+    def test_the_registry_still_holds_only_hashes(self) -> None:
+        from tripwire import canary
+        with tempfile.TemporaryDirectory() as td:
+            registry = os.path.join(td, "canaries.json")
+            res = canary.generate(1, path=registry, plant_dir=os.path.join(td, "www"))
+            self.assertNotIn(res["tokens"][0], open(registry, encoding="utf-8").read())

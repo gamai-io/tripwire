@@ -37,7 +37,8 @@ Python 3.9+, no services, no model, no network calls at analysis time.
 ## Plant canaries
 
 ```bash
-tripwire canary generate --count 3 --note "planted in /docs/api.md" --registry canaries.json
+tripwire canary generate --count 3 --registry canaries.json \
+        --plant-dir /var/www/decoy    # writes decoy docs containing the tokens
 # prints the tokens ONCE; only their sha256 is stored
 tripwire canary list     --registry canaries.json
 tripwire check --token tw_xxx --registry canaries.json      # exit 0 = planted
@@ -229,7 +230,7 @@ and what is deliberately missing are in
 python -m pytest -q tests/
 ```
 
-93 tests: the reported timeline scores **high** with all four decisive rules; a
+95 tests: the reported timeline scores **high** with all four decisive rules; a
 canary in the same log is **critical**; a developer switching to `curl` stays
 **low**; a doc reader without a failed check is suppressed; one document unlocks
 one path; a redirect-heavy scan is caught without any 4xx; a search bot is not a

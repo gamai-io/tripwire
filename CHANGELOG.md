@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.1 — 2026-11-25
+- `tripwire canary generate --plant-dir DIR` writes decoy API documents that
+  contain the tokens, so planting is one command instead of hand-editing a file.
+  The registry still stores only hashes; the plaintext exists only in the planted
+  file.
+- `canary match` returns each token once, however many times it appears in a line.
+- 95 tests.
+
 ## 0.8.0 — 2026-11-25
 Security and correctness pass after an external review:
 - **Denial now requires identity evidence** (canary, probed/rejected credentials,
