@@ -54,6 +54,6 @@ jobs:
           path: dist
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
-          # a retry after a partial upload must not fail on "file already exists"
+          # no token: the publisher entry added on PyPI trusts this repo+workflow
           skip-existing: true
+          attestations: true

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.1 — 2026-11-25
+- Publish through OIDC trusted publishing with PEP 740 attestations (the PyPI
+  publisher entry was added on 2026-11-25); the API token is no longer used.
+
 ## 0.7.0 — 2026-11-25
 - `--stream` / `--chunk`: score a file too large to hold. Only the window stays in
   memory; chunks are scored and findings unioned per source with points taking the
