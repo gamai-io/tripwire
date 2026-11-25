@@ -100,6 +100,14 @@ Levels: `critical` (canary), `high` (>=6), `medium` (>=3), else `low`.
 `spec_derived_novel_path` and `docs_link_follow` are **suppressed** unless the
 same address failed a `401`/`403` in the window or a canary fired.
 
+Replay the reported sequence and watch the score grow request by request:
+
+```bash
+python3 tools/replay.py
+# t+29s  GET /api/v1/transactions  200  10  high
+# first high: t+29s — a replay scored after the fact, not a live block
+```
+
 ## Measured, not asserted
 
 ```bash
