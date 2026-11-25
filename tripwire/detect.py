@@ -234,14 +234,14 @@ def analyse(rows: list[dict], registry: dict | None = None, window: int = 600,
 
 def watch(log_path: str, registry: dict | None = None, window: int = 600,
           ledger: str | None = None, fmt: str = "auto",
-          now: float | None = None) -> dict:
+          now: float | None = None, trusted: list | None = None) -> dict:
     """Score a file.
 
     `now` defaults to the newest row in the file, so a log written yesterday is
     still analysed instead of silently producing "0 sources, 0 flagged". Pass
     `now=time.time()` for live tailing.
     """
-    rows = logread.load(log_path, fmt)
+    rows = logread.load(log_path, fmt, trusted)
     if now is None and rows:
         now = max(float(r.get("ts") or 0) for r in rows) + 1
     result = analyse(rows, registry, window, now=now)

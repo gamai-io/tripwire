@@ -75,6 +75,20 @@ JSONL line, one per request:
 For nginx: `log_format ... escape=json` gives this shape directly; a combined log
 needs no change at all.
 
+**Behind a CDN or a load balancer** every request arrives from the proxy, so the
+peer address is not the client. Either let nginx resolve it
+(`set_real_ip_from <proxy>; real_ip_header X-Forwarded-For;` — then `combined`
+already carries the real client), or include `xff` in the JSONL line and name the
+proxy:
+
+```bash
+tripwire watch --log access.jsonl --trusted-proxy 10.0.0.0/8 --trusted-proxy 104.16.0.0/13
+```
+
+`X-Forwarded-For` from an address you did **not** list is ignored and recorded as
+`xff_ignored`, because otherwise anyone can pick someone else's address and get
+that address blocked.
+
 **Deny list.** `--deny-map` writes `deny <ip>;` lines with a comment per entry
 carrying `expires=<epoch>`; `--deny-json` writes the same as data. Three gates
 before an address is blocked:
@@ -148,7 +162,7 @@ commands reproduces every number.
 python -m pytest -q tests/
 ```
 
-45 tests: the reported timeline scores **high** with all four decisive rules; a
+51 tests: the reported timeline scores **high** with all four decisive rules; a
 canary in the same log is **critical**; a developer switching to `curl` stays
 **low**; a doc reader without a failed check is suppressed; one document unlocks
 one path; a redirect-heavy scan is caught without any 4xx; a search bot is not a

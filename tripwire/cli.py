@@ -43,6 +43,10 @@ def main(argv=None) -> int:
                          help="'file' (default: newest row), 'wall', or an epoch")
     p_watch.add_argument("--deny-unsafe", dest="deny_unsafe", action="store_true",
                          help="also deny on volume evidence alone (CDN/NAT risk)")
+    p_watch.add_argument("--trusted-proxy", dest="trusted_proxy", action="append",
+                         default=None,
+                         help="CIDR of a proxy whose X-Forwarded-For is trusted "
+                              "(repeatable; unlisted peers keep their own address)")
     p_watch.add_argument("--ignore", action="append", default=None,
                          help="address never to deny (repeatable, e.g. your scanner)")
 
@@ -83,7 +87,8 @@ def main(argv=None) -> int:
             except ValueError:
                 _emit({"error": "Usage", "message": "--now takes 'file', 'wall' or an epoch"}, None)
                 return 2
-        res = detect.watch(a.log, registry, a.window, a.ledger, a.format, now=now)
+        res = detect.watch(a.log, registry, a.window, a.ledger, a.format, now=now,
+                           trusted=a.trusted_proxy)
         order = {"low": 0, "medium": 1, "high": 2, "critical": 3}
         floor = order[a.min_level]
         flagged = {ip: s for ip, s in res["sessions"].items()

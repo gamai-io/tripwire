@@ -8,6 +8,7 @@ value, which is what the key-probing rule needs).
 from __future__ import annotations
 
 import calendar
+import ipaddress
 import json
 import re
 
@@ -87,7 +88,55 @@ def guess_format(path: str) -> str:
     return "jsonl"
 
 
-def load(path: str, fmt: str = "auto") -> list[dict]:
+def _in_trusted(ip: str, trusted: list) -> bool:
+    try:
+        address = ipaddress.ip_address(ip)
+    except ValueError:
+        return False
+    for item in trusted:
+        try:
+            if address in ipaddress.ip_network(item, strict=False):
+                return True
+        except ValueError:
+            continue
+    return False
+
+
+def resolve_client(row: dict, trusted: list | None = None) -> dict:
+    """Trust `X-Forwarded-For` only from an address you named.
+
+    Behind a CDN or a load balancer every request arrives from the proxy, so the
+    peer address is useless. But if anyone may set the header, an attacker picks
+    someone else's address and gets that address blocked — the header is a
+    weapon unless the proxy is pinned. Unlisted peers keep their own address and
+    the spoof is visible in `xff_ignored`.
+    """
+    trusted = trusted or []
+    raw = str(row.get("xff") or "").strip()
+    if not raw:
+        return row
+    if not _in_trusted(str(row.get("ip") or ""), trusted):
+        row = dict(row)
+        row["xff_ignored"] = raw[:200]
+        return row
+    hops = [part.strip() for part in raw.split(",") if part.strip()]
+    client = ""
+    for hop in reversed(hops):
+        try:
+            ipaddress.ip_address(hop)
+        except ValueError:
+            continue
+        if not _in_trusted(hop, trusted):
+            client = hop
+            break
+    if client:
+        row = dict(row)
+        row["peer"] = row.get("ip")
+        row["ip"] = client
+    return row
+
+
+def load(path: str, fmt: str = "auto", trusted: list | None = None) -> list[dict]:
     fmt = guess_format(path) if fmt in ("", "auto") else fmt
     rows: list[dict] = []
     with open(path, encoding="utf-8", errors="replace") as fh:
@@ -107,5 +156,5 @@ def load(path: str, fmt: str = "auto") -> list[dict]:
                 if not row.get("ua_platform") and row.get("ua"):
                     row["ua_platform"] = _platform(str(row["ua"]))
             if row:
-                rows.append(row)
+                rows.append(resolve_client(row, trusted))
     return rows

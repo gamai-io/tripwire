@@ -125,6 +125,9 @@ per-entry expiry. Before writing, each address is checked with
 - `slow_scanner` lands on medium. Raising it to high would require calling every
   slow 404 walk an incident; the deny threshold defaults to medium instead.
 - Thresholds are global, not per-API. Per-path baselines are future work.
+- Behind a CDN every request looks like it comes from the CDN. `--trusted-proxy`
+  fixes the address only when the proxy is pinned; a log that never recorded
+  `X-Forwarded-For` cannot be repaired afterwards.
 - Denial is deliberately conservative: on this server's real log, **zero**
   addresses qualify (the three WordPress probes answer `301`, so no credential
   failure is visible; one behaviour plus volume is not enough). That is the
