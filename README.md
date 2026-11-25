@@ -99,11 +99,11 @@ never rewrites firewall state itself. Three gates before an address is blocked:
 
 1. **Global unicast only** — loopback, RFC1918, link-local and documentation
    ranges are skipped and reported: blocking them takes the service down.
-2. **Evidence, not volume** — `velocity`, `wide_probe`, `path_burst` and
-   `low_and_slow_scan` fire on shared egress (a CDN, a corporate NAT), so they
-   alert but do not deny. Denial needs a canary, probed or rejected credentials,
-   two independent behaviours, or one behaviour plus five failed requests.
-   `--deny-unsafe` opts into volume-based blocking.
+2. **Identity, not behaviour** — denial needs a canary, probed or rejected
+   credentials, or one credential used across several addresses *with* a failure
+   ratio. Behaviour (`ua_flip`, `tool_switch`, `velocity`, `path_burst`) only
+   alerts: a laptop, a phone and one curl script behind a shared NAT look exactly
+   like an intruder. `--deny-unsafe` opts into volume-based blocking.
 3. **Expiry in the file** — a cron that re-runs `watch` both adds and removes.
 
 `--ignore <ip>` (repeatable) keeps your own scanner out.
@@ -229,7 +229,7 @@ and what is deliberately missing are in
 python -m pytest -q tests/
 ```
 
-90 tests: the reported timeline scores **high** with all four decisive rules; a
+93 tests: the reported timeline scores **high** with all four decisive rules; a
 canary in the same log is **critical**; a developer switching to `curl` stays
 **low**; a doc reader without a failed check is suppressed; one document unlocks
 one path; a redirect-heavy scan is caught without any 4xx; a search bot is not a

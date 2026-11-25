@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.8.0 — 2026-11-25
+Security and correctness pass after an external review:
+- **Denial now requires identity evidence** (canary, probed/rejected credentials,
+  one credential across addresses with a failure ratio). Behaviours alert but no
+  longer deny: `ua_flip` + `tool_switch` from one address is a shared NAT, and the
+  previous rule would have blocked it.
+- **Every row-based rule now honours the window.** Old 401s from hours ago no
+  longer attach to today's session, and `key_across_addresses` needs a failure
+  ratio, so one working key from three offices is not treated as theft.
+- **Streaming no longer drops canaries**: the token is matched per row as it is
+  read, not only inside a scored chunk.
+- A deny list written only as JSON is merged on the next run instead of being
+  wiped when the nginx map is absent.
+- A future-dated line no longer blinds the run (the clock is clamped, future rows
+  are excluded), and an unparsable status no longer crashes the parser.
+- 93 tests.
+
 ## 0.7.1 — 2026-11-25
 - Publish through OIDC trusted publishing with PEP 740 attestations (the PyPI
   publisher entry was added on 2026-11-25); the API token is no longer used.

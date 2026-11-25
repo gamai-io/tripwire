@@ -119,6 +119,9 @@ per-entry expiry. Before writing, each address is checked with
 - loopback, private, link-local, multicast and documentation ranges are **never**
   denied; they are listed in the file as `# skipped <ip> (<reason>)`;
 - `--ignore 198.51.100.9` (repeatable) keeps your own scanner out of the list;
+- **behaviour never denies.** `ua_flip` + `tool_switch` + `velocity` from one
+  address is what a shared NAT with a laptop, a phone and one script looks like; it
+  alerts and is reported as `behaviour only`, and is not blocked.
 - **volume rules never deny.** `velocity`, `wide_probe`, `path_burst` and
   `low_and_slow_scan` fire on shared egress — a CDN, a corporate NAT, a hospital
   with one line. Denial needs a canary, probed or rejected credentials, two

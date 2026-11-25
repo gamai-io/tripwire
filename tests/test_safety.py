@@ -1,6 +1,7 @@
 """Safety of the verdict and the deny list, plus the measured tuning."""
 from __future__ import annotations
 
+import json
 import os
 import tempfile
 import time
@@ -144,17 +145,20 @@ class DenySafety(unittest.TestCase):
         self.assertEqual(res["count"], 0)
         self.assertIn("volume", res["skipped"][0]["why"])
 
-    def test_two_behaviours_do_deny(self) -> None:
+    def test_behaviour_alone_never_denies_a_shared_address(self) -> None:
+        """A laptop, a phone and one curl script behind one NAT look like this."""
         result = {"sessions": {"8.8.4.4": {"level": "high", "points": 8,
                                            "findings": [{"rule": "ua_flip"},
                                                         {"rule": "tool_switch"}]}},
                   "evidence": {"8.8.4.4": {"failures": 0}}}
-        self.assertEqual(detect.deny_list(result)["count"], 1)
+        out = detect.deny_list(result)
+        self.assertEqual(out["count"], 0)
+        self.assertIn("behaviour", out["skipped"][0]["why"])
 
-    def test_one_behaviour_with_failures_does_deny(self) -> None:
+    def test_identity_evidence_denies(self) -> None:
         result = {"sessions": {"8.8.4.4": {"level": "high", "points": 6,
-                                           "findings": [{"rule": "ua_flip"}]}},
-                  "evidence": {"8.8.4.4": {"failures": 7}}}
+                                           "findings": [{"rule": "auth_failure_streak"}]}},
+                  "evidence": {"8.8.4.4": {"failures": 9}}}
         self.assertEqual(detect.deny_list(result)["count"], 1)
 
     def test_the_operator_can_opt_into_volume_denial(self) -> None:
@@ -191,3 +195,32 @@ class CanaryStillWins(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FutureAndGarbage(unittest.TestCase):
+    def test_a_future_dated_line_does_not_blind_the_run(self) -> None:
+        from tripwire import detect as d
+        now = time.time()
+        rows = [row(now - 60 + i, "/pricing") for i in range(50)]
+        rows.append(row(now + 400 * 86400, "/", 403, ip="198.51.100.7"))
+        result = d.analyse(rows, window=600, now=now)
+        self.assertGreaterEqual(result["sources"], 1)
+        self.assertNotIn("198.51.100.7", result["sessions"])
+
+    def test_an_unparsable_status_does_not_crash_the_parser(self) -> None:
+        line = ('203.0.113.9 - - [25/Nov/2026:00:00:22 +0100] "GET /x HTTP/1.1" '
+                '- 10 "-" "curl/8.7.1"')
+        self.assertIsNone(logread.parse_combined(line))
+
+    def test_the_deny_list_merges_with_a_json_only_run(self) -> None:
+        result = {"sessions": {"8.8.4.4": {"level": "critical", "points": 10,
+                                           "findings": [{"rule": "canary_used"}]}},
+                  "evidence": {}}
+        with tempfile.TemporaryDirectory() as td:
+            js = os.path.join(td, "deny.json")
+            detect.write_deny_files(result, None, js, now=NOW)
+            first = json.load(open(js))["deny"]
+            self.assertEqual(len(first), 1)
+            quiet = {"sessions": {}, "evidence": {}}
+            detect.write_deny_files(quiet, None, js, now=NOW + 60)
+            self.assertEqual(len(json.load(open(js))["deny"]), 1)

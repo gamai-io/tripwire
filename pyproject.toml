@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gamai-tripwire"
-version = "0.7.1"
+version = "0.8.0"
 description = "Detect an inbound AI agent by behaviour, not blocklists: planted canaries, spec-derived novel paths, tool switching, key probing."
 readme = "README.md"
 requires-python = ">=3.9"

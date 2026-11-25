@@ -47,6 +47,13 @@ def _platform(ua: str) -> str:
     return "desktop"
 
 
+def _status(value) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
 def parse_combined(line: str) -> dict | None:
     match = COMBINED.match(line.strip())
     if not match:
@@ -68,7 +75,7 @@ def parse_combined(line: str) -> dict | None:
     return {
         "ts": ts, "ip": match.group("ip"), "ua": "" if ua == "-" else ua,
         "method": method or "GET", "path": path or "/",
-        "status": int(match.group("status")),
+        "status": _status(match.group("status")),
         "auth": "none" if user in ("-", "") else user,
         "referer": "" if referer == "-" else referer,
         "ua_platform": _platform(ua),

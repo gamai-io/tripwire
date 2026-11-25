@@ -137,14 +137,21 @@ def key_across_addresses(rows: list[dict], min_addresses: int = 3,
         value = str(row.get("auth") or "none").strip()
         if value in ("", "none", "-"):
             continue
-        item = by_key.setdefault(value, {"key": value, "addresses": set(), "failures": 0})
+        item = by_key.setdefault(value, {"key": value, "addresses": set(),
+                                         "failures": 0, "requests": 0})
+        item["requests"] += 1
         item["addresses"].add(str(row.get("ip") or "?"))
         if int(row.get("status") or 0) in FAILED:
             item["failures"] += 1
-    return [{"key": value, "addresses": sorted(item["addresses"]),
-             "failures": item["failures"]}
-            for value, item in by_key.items()
-            if len(item["addresses"]) >= min_addresses and item["failures"] >= min_failures]
+    out = []
+    for value, item in by_key.items():
+        if len(item["addresses"]) < min_addresses or item["failures"] < min_failures:
+            continue
+        if item["requests"] and item["failures"] / item["requests"] < 0.25:
+            continue          # a working key used from several offices is not theft
+        out.append({"key": value, "addresses": sorted(item["addresses"]),
+                    "failures": item["failures"], "requests": item["requests"]})
+    return out
 
 
 def _failed_here(rows: list[dict]) -> bool:
@@ -170,7 +177,11 @@ def _corroborate(session: dict, failure: bool, canary: bool) -> None:
 
 def analyse(rows: list[dict], registry: dict | None = None, window: int = 600,
             now: float | None = None) -> dict:
-    base = agentwatch.analyse(rows, window=window, now=now)
+    moment = time.time() if now is None else float(now)
+    in_window = [r for r in rows
+                 if (window <= 0 or moment - float(r.get("ts") or 0) <= window)
+                 and float(r.get("ts") or 0) <= moment + 300]
+    base = agentwatch.analyse(in_window, window=window, now=moment)
     by_ip = defaultdict(list)
     for row in rows:
         by_ip[str(row.get("ip") or "?")].append(row)
@@ -184,7 +195,7 @@ def analyse(rows: list[dict], registry: dict | None = None, window: int = 600,
             canary_hits.append({"ip": row.get("ip"), "ts": row.get("ts"),
                                 "path": row.get("path"), "canary": hit.get("id")})
 
-    for item in spec_derived_paths(rows):
+    for item in spec_derived_paths(in_window):
         session = base["sessions"].get(item["ip"])
         if session is not None:
             session["findings"].append({
@@ -194,7 +205,7 @@ def analyse(rows: list[dict], registry: dict | None = None, window: int = 600,
             session["points"] += 3
             session["level"] = _level(session["points"])
 
-    for cluster in key_across_addresses(rows):
+    for cluster in key_across_addresses(in_window):
         for ip in cluster["addresses"]:
             session = base["sessions"].get(ip)
             if session is None:
@@ -208,7 +219,7 @@ def analyse(rows: list[dict], registry: dict | None = None, window: int = 600,
             session["points"] += weight
             session["level"] = _level(session["points"])
 
-    for item in auth_failure_streak(rows):
+    for item in auth_failure_streak(in_window):
         session = base["sessions"].get(item["ip"])
         if session is not None:
             session["findings"].append({
@@ -218,7 +229,7 @@ def analyse(rows: list[dict], registry: dict | None = None, window: int = 600,
             session["points"] += 4
             session["level"] = _level(session["points"])
 
-    for item in path_burst(rows):
+    for item in path_burst(in_window):
         session = base["sessions"].get(item["ip"])
         if session is not None:
             session["findings"].append({
@@ -227,7 +238,7 @@ def analyse(rows: list[dict], registry: dict | None = None, window: int = 600,
             session["points"] += 3
             session["level"] = _level(session["points"])
 
-    for item in wide_probe(rows):
+    for item in wide_probe(in_window):
         session = base["sessions"].get(item["ip"])
         if session is not None:
             session["findings"].append({
@@ -274,9 +285,9 @@ def analyse(rows: list[dict], registry: dict | None = None, window: int = 600,
 
     return {"window_s": window, "sources": base["sources"], "evidence": evidence,
             "flagged": sum(1 for s in base["sessions"].values() if s["level"] != "low"),
-            "canary_hits": canary_hits, "spec_derived_paths": spec_derived_paths(rows),
-            "auth_failure_streaks": auth_failure_streak(rows),
-            "key_clusters": key_across_addresses(rows),
+            "canary_hits": canary_hits, "spec_derived_paths": spec_derived_paths(in_window),
+            "auth_failure_streaks": auth_failure_streak(in_window),
+            "key_clusters": key_across_addresses(in_window),
             "sessions": base["sessions"]}
 
 
@@ -319,12 +330,13 @@ def watch_stream(log_path: str, registry: dict | None = None, window: int = 600,
     latest = 0.0
     since_analysis = 0
     rows_seen: list[dict] = []
+    stream_canaries: list[dict] = []
 
     def analyse_window(final: bool = False) -> None:
         rows = list(kept)
         if not rows:
             return
-        result = analyse(rows, registry, window, now=latest + 1)
+        result = analyse(rows, None, window, now=latest + 1)
         for ip, session in result["sessions"].items():
             target = merged.setdefault(ip, {"points": 0, "level": "low", "findings": [],
                                             "requests": 0, "first_ts": None,
@@ -338,6 +350,13 @@ def watch_stream(log_path: str, registry: dict | None = None, window: int = 600,
 
     for row in logread.iter_rows(log_path, fmt, trusted):
         total += 1
+        text = " ".join(str(row.get(k) or "") for k in
+                        ("path", "ua", "referer", "query", "body", "auth"))
+        text = urllib.parse.unquote(text)
+        for hit in canary_mod.match(text, registry or {}):
+            stream_canaries.append({"ip": row.get("ip"), "ts": row.get("ts"),
+                                    "path": row.get("path"),
+                                    "canary": hit.get("id")})
         ts = float(row.get("ts") or 0)
         latest = max(latest, ts)
         kept.append(row)
@@ -353,6 +372,19 @@ def watch_stream(log_path: str, registry: dict | None = None, window: int = 600,
             while len(kept) > chunk:
                 kept.popleft()
     analyse_window(final=True)
+    canary_hits.extend(stream_canaries)
+    for hit in stream_canaries:
+        session = merged.get(str(hit["ip"]))
+        if session is None:
+            session = merged[str(hit["ip"])] = {"points": 10, "level": "critical",
+                                                "findings": [], "requests": 0,
+                                                "first_ts": hit.get("ts"),
+                                                "last_ts": hit.get("ts")}
+        session.setdefault("findings", []).append({
+            "rule": "canary_used", "points": 10,
+            "detail": "planted key %s used on %s" % (hit["canary"], hit["path"])})
+        session["points"] = max(int(session.get("points") or 0), 10)
+        session["level"] = "critical"
     rows = rows_seen if baseline_path else []
     result = {"window_s": window, "sources": len(merged), "rows": total,
               "skipped_lines": skipped, "empty": total == 0,
@@ -422,7 +454,8 @@ def watch(log_path: str, registry: dict | None = None, window: int = 600,
     """
     rows, stats = logread.load_stats(log_path, fmt, trusted)
     if now is None and rows:
-        now = max(float(r.get("ts") or 0) for r in rows) + 1
+        # a single future-dated line must not blind the whole run
+        now = min(max(float(r.get("ts") or 0) for r in rows) + 1, time.time() + 60)
     result = analyse(rows, registry, window, now=now)
     _apply_baseline(result, rows, baseline_path, baseline_factor, baseline_floor,
                     baseline_update)
@@ -519,12 +552,11 @@ def deny_evidence(session: dict, evidence: dict | None) -> tuple[bool, str]:
         return True, "canary"
     if rules & IDENTITY_RULES:
         return True, "identity evidence: %s" % ",".join(sorted(rules & IDENTITY_RULES))
+    # Behaviour alone is never enough to block an address: a shared NAT with a
+    # laptop, a phone and one curl script looks exactly like this. Alerts stay.
     behaviours = rules & BEHAVIOUR_RULES
-    failures = int((evidence or {}).get("failures") or 0)
-    if len(behaviours) >= 2:
-        return True, "two behaviours: %s" % ",".join(sorted(behaviours))
-    if behaviours and failures >= 5:
-        return True, "behaviour + %d failed requests" % failures
+    if behaviours:
+        return False, "behaviour only (%s); alert, not block" % ",".join(sorted(behaviours))
     return False, "volume evidence only (%s)" % (",".join(sorted(rules)) or "none")
 
 
@@ -666,10 +698,26 @@ def deny_list(result: dict, min_level: str = "medium", now: float | None = None,
                      "deny": list(merged.values())}}
 
 
+def read_deny_json(path: str) -> dict:
+    if not path or not os.path.exists(path):
+        return {}
+    try:
+        data = json.load(open(path, encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    out = {}
+    for item in data.get("deny") or []:
+        if isinstance(item, dict) and item.get("ip"):
+            out[str(item["ip"])] = item
+    return out
+
+
 def write_deny_files(result: dict, map_path: str | None, json_path: str | None,
                      **kwargs) -> dict:
     """Merge with whatever is on disk, then replace it atomically."""
     previous = read_deny_map(map_path or "") if map_path else {}
+    if not previous and json_path:
+        previous = read_deny_json(json_path)
     out = deny_list(result, previous=previous, **kwargs)
     if out.get("error"):
         return out
