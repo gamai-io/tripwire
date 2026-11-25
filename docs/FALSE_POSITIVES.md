@@ -7,7 +7,7 @@ log. Nothing here is an estimate.
 ## 1. Synthetic corpus (reproducible)
 
 ```bash
-python3 tools/gen_corpus.py --out corpus --benign 300 --attack 60 --seed 20261125
+python3 tools/gen_corpus.py --out corpus --benign 360 --attack 80 --seed 20261125
 python3 tools/measure.py --corpus corpus
 ```
 

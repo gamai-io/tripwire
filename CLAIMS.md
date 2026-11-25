@@ -2,8 +2,8 @@
 
 | claim | value | command |
 |---|---|---|
-| version | 0.3.0 | `python3 tools/claims.py --version` |
-| tests | 60 | `python3 -m pytest -q tests/` |
+| version | 0.8.0 | `python3 tools/claims.py --version` |
+| tests | 93 | `python3 -m pytest -q tests/` |
 | benign sessions flagged | 0 / 300 | `python3 tools/gen_corpus.py --out corpus && python3 tools/measure.py --corpus corpus` |
 | attacks at high | 45 / 60 | same command |
 | attacks at medium+ | 60 / 60 | same command |
