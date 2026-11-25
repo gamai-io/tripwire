@@ -132,6 +132,7 @@ tailing, `--now <epoch>` for a fixed cut-off. An empty or unparsable file exits
 | rule | points | what it sees |
 |---|---|---|
 | `canary_used` | 10 | a planted key was sent — **critical on its own** |
+| `key_across_addresses` | 3–6 | one credential from 3+ addresses **and** 5+ rejected requests (6 when 6+ addresses or 20+ rejections) |
 | `key_probing` | 4 | 3+ distinct auth values (or none) on one path within 60 s |
 | `auth_failure_streak` | 4 | 5+ rejected credentials on one endpoint within 60 s |
 | `spec_derived_novel_path` | 3 | first request to a path right after a spec fetch |
@@ -159,15 +160,15 @@ python3 tools/replay.py
 ## Measured, not asserted
 
 ```bash
-python3 tools/gen_corpus.py --out corpus --benign 300 --attack 60 --seed 20261125
+python3 tools/gen_corpus.py --out corpus --benign 360 --attack 80 --seed 20261125
 python3 tools/measure.py --corpus corpus
 ```
 
 | corpus | result |
 |---|---|
-| 300 benign sessions (readers, doc readers, developers on `curl`, crawlers, API clients, monitoring) | **0 flagged**, at any level |
-| 60 attack sessions (incident replay, key prober, slow scanner, docs crawler) | **45 high**, **60 medium or higher** |
-| **held-out corpus**, different seed (771122), same 300/60 split | **0 flagged**, **45 high**, **60 medium+** — identical to the tuning seed |
+| 360 benign sessions (adds a service that shares one **working** key across 4 egress addresses) | **0 flagged**, at any level |
+| 80 attack sessions (adds a key rotated across 8 addresses) | **64 high**, **80 medium or higher** |
+| **held-out corpus**, different seed (771122), same 360/80 split | **0 flagged**, **64 high**, **80 medium+** — identical to the tuning seed |
 | this server's nginx log: 4,048 requests, 238 sources | 5 flagged ≥ medium, **0 proven false positives**, 3 confirmed WordPress probing + a 770-path scanner that answers only 301 |
 | 100,000 requests from one address on one path, one key | **1.20 s** with gama-mandate 0.44+ (658 s before the fix, and zero findings) |
 
@@ -196,7 +197,7 @@ and what is deliberately missing are in
 python -m pytest -q tests/
 ```
 
-69 tests: the reported timeline scores **high** with all four decisive rules; a
+75 tests: the reported timeline scores **high** with all four decisive rules; a
 canary in the same log is **critical**; a developer switching to `curl` stays
 **low**; a doc reader without a failed check is suppressed; one document unlocks
 one path; a redirect-heavy scan is caught without any 4xx; a search bot is not a

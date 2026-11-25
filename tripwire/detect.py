@@ -123,6 +123,29 @@ def wide_probe(rows: list[dict], threshold: int = 25) -> list[dict]:
             if len(paths) >= threshold]
 
 
+def key_across_addresses(rows: list[dict], min_addresses: int = 3,
+                         min_failures: int = 5) -> list[dict]:
+    """One credential, several source addresses, and it keeps failing.
+
+    This is the evasion that beats every per-address rule: rotate the IP and each
+    address looks innocent. A shared *working* key from several egress addresses
+    is normal infrastructure, so the rule needs the failures as well.
+    """
+    by_key: dict[str, dict] = {}
+    for row in rows:
+        value = str(row.get("auth") or "none").strip()
+        if value in ("", "none", "-"):
+            continue
+        item = by_key.setdefault(value, {"key": value, "addresses": set(), "failures": 0})
+        item["addresses"].add(str(row.get("ip") or "?"))
+        if int(row.get("status") or 0) in FAILED:
+            item["failures"] += 1
+    return [{"key": value, "addresses": sorted(item["addresses"]),
+             "failures": item["failures"]}
+            for value, item in by_key.items()
+            if len(item["addresses"]) >= min_addresses and item["failures"] >= min_failures]
+
+
 def _failed_here(rows: list[dict]) -> bool:
     return any(int(r.get("status") or 0) in FAILED for r in rows)
 
@@ -168,6 +191,20 @@ def analyse(rows: list[dict], registry: dict | None = None, window: int = 600,
                 "detail": "first request to %s %.1fs after an API document"
                           % (item["path"], item["seconds_after_doc"])})
             session["points"] += 3
+            session["level"] = _level(session["points"])
+
+    for cluster in key_across_addresses(rows):
+        for ip in cluster["addresses"]:
+            session = base["sessions"].get(ip)
+            if session is None:
+                continue
+            wide = len(cluster["addresses"]) >= 6 or cluster["failures"] >= 20
+            weight = 6 if wide else 3
+            session["findings"].append({
+                "rule": "key_across_addresses", "points": weight,
+                "detail": "the same credential was used from %d addresses with %d rejected "
+                          "requests" % (len(cluster["addresses"]), cluster["failures"])})
+            session["points"] += weight
             session["level"] = _level(session["points"])
 
     for item in auth_failure_streak(rows):
@@ -238,6 +275,7 @@ def analyse(rows: list[dict], registry: dict | None = None, window: int = 600,
             "flagged": sum(1 for s in base["sessions"].values() if s["level"] != "low"),
             "canary_hits": canary_hits, "spec_derived_paths": spec_derived_paths(rows),
             "auth_failure_streaks": auth_failure_streak(rows),
+            "key_clusters": key_across_addresses(rows),
             "sessions": base["sessions"]}
 
 
@@ -321,7 +359,8 @@ def path_burst(rows: list[dict], threshold: int = 40, within: float = 60.0) -> l
     return out
 
 
-IDENTITY_RULES = {"canary_used", "key_probing", "auth_failure_streak"}
+IDENTITY_RULES = {"canary_used", "key_probing", "auth_failure_streak",
+                  "key_across_addresses"}
 BEHAVIOUR_RULES = {"ua_flip", "tool_switch", "docs_link_follow",
                    "spec_derived_novel_path", "read_after_submit"}
 

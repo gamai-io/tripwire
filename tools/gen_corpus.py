@@ -116,7 +116,27 @@ def monitoring(rng, ip, start):
     return rows
 
 
-BENIGN = {"human_reader": human_reader, "human_docs": human_docs,
+def key_rotator(rng, ip, start):
+    """Same credential, a new address every few requests: the reported evasion."""
+    rows, ts = [], start
+    for i in range(40):
+        ts += rng.uniform(1, 4)
+        addr = "198.51.100.%d" % (10 + (i % 8))
+        rows.append(row(ts, addr, CURL, rng.choice(API), 401, auth="stolen-key"))
+    return rows
+
+
+def shared_egress_key(rng, ip, start):
+    """One service, one key, several egress addresses, everything works."""
+    rows, ts = [], start
+    for i in range(60):
+        ts += rng.uniform(0.5, 2)
+        addr = "203.0.113.%d" % (200 + (i % 4))
+        rows.append(row(ts, addr, HTTPX, rng.choice(API), 200, auth="service-key"))
+    return rows
+
+
+BENIGN = {"shared_egress_key": shared_egress_key, "human_reader": human_reader, "human_docs": human_docs,
           "developer_curl": developer_curl, "crawler": crawler,
           "api_client": api_client, "monitoring": monitoring}
 
@@ -168,7 +188,7 @@ def docs_crawler(rng, ip, start):
     return rows
 
 
-ATTACK = {"incident": incident, "key_prober": key_prober,
+ATTACK = {"key_rotator": key_rotator, "incident": incident, "key_prober": key_prober,
           "slow_scanner": slow_scanner, "docs_crawler": docs_crawler}
 
 
@@ -223,3 +243,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+

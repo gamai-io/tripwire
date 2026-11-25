@@ -22,28 +22,30 @@ that contains the whole session, so the result does not depend on when it runs.
 | `crawler` | 50 | Googlebot/Bingbot, 40–120 paths, some 404 |
 | `api_client` | 50 | httpx/curl, 50–200 calls, 3–6 paths, valid key |
 | `monitoring` | 50 | `curl /health` every 30 s |
+| `shared_egress_key` | 60 | one **working** key used from 4 egress addresses |
 
 | family | sessions | what it does |
 |---|---|---|
 | `incident` | 15 | the reported sequence: 403, fake phone UA, decoy doc, path from the doc, 3 keys in 4 s |
 | `key_prober` | 15 | 20 keys against one endpoint, 300 ms apart |
 | `slow_scanner` | 15 | 30 new paths, one 404 each, 10–20 s apart |
-| `docs_crawler` | 15 | spec, then 10 new endpoints with 401 |
+| `docs_crawler` | 16 | spec, then 10 new endpoints with 401 |
+| `key_rotator` | 16 | the same stolen key from 8 addresses, 40 rejected requests |
 
 ### Result (after the tuning described below)
 
 | metric | value |
 |---|---|
-| benign sessions | 300 |
+| benign sessions | 360 |
 | benign flagged **high/critical** | **0** (0.0 %) |
 | benign flagged **at any level** | **0** (0.0 %) |
-| attack sessions | 60 |
-| attack flagged **high** | 45 (75 %) |
-| attack flagged **medium or higher** | **60 (100 %)** |
+| attack sessions | 80 |
+| attack flagged **high** | 64 (80 %) |
+| attack flagged **medium or higher** | **80 (100 %)** |
 | `slow_scanner` | medium only — by design, see below |
 
-Per family, attacks: `incident` 15/15 high, `key_prober` 15/15 high,
-`docs_crawler` 15/15 high, `slow_scanner` 15/15 medium.
+Per family, attacks: `incident` 16/16 high, `key_prober` 16/16 high,
+`docs_crawler` 16/16 high, `key_rotator` 16/16 high, `slow_scanner` 16/16 medium.
 
 ### Held-out sample
 
@@ -52,9 +54,9 @@ run on a fresh sample, seed `771122`, 300 benign and 60 attack sessions:
 
 | metric | tuning seed | held-out seed |
 |---|---|---|
-| benign flagged (any level) | 0 / 300 | **0 / 300** |
-| attacks high | 45 / 60 | **45 / 60** |
-| attacks medium or higher | 60 / 60 | **60 / 60** |
+| benign flagged (any level) | 0 / 360 | **0 / 360** |
+| attacks high | 64 / 80 | **64 / 80** |
+| attacks medium or higher | 80 / 80 | **80 / 80** |
 
 Identical, which is what one hopes for and not the same thing as proof: both
 samples come from the same generator, so this rules out seed luck, not model
@@ -102,6 +104,7 @@ All four changes came from corpus runs, not from taste.
 | document rules need **corroboration** | `docs_link_follow` + `spec_derived_novel_path` = 6 points = high for anyone reading the spec. They now count only if the same address also produced a `401`/`403` in the window, or a canary fired. This is the exact discriminator in the reported intrusion. |
 | one document unlocks **one** path | before, a single request to a doc-ish path made every new path in the next 60 s "spec-derived"; a scanner walking 300 paths produced ~300 findings. The incident shape is one document → one followed link. |
 | failed document fetch does **not** unlock | a `403` on `/docs/api.md` is not a document we served, so nothing can be derived from it. |
+| `key_across_addresses` added | the one evasion that beat every per-address rule: the same credential from 8 addresses scored **nothing**. It now scores 6 when 6+ addresses or 20+ rejections; a *working* key shared by 4 egress addresses stays low because the rule also needs the failures. |
 | `path_burst` added (40 paths/min, status-independent) | a scanner behind a redirect-heavy vhost answers `301` to everything and scored 1 point on this server's own log. Search crawlers are excluded by user agent, so the corpus `crawler` family stays at 0 false positives. |
 | the window is measured against the file, not the clock | `--window 600` on a log from yesterday produced `0 sources, 0 flagged, exit 0` — a clean bill of health for a file that was never read. The default `now` is now the newest row; an empty file exits 3. |
 | a canary opens its own case | a canary hit whose row fell outside the window was counted in `canary_hits` but produced no session, so `flagged` stayed 0. The hit now synthesises a session at `critical`. |

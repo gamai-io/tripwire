@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.0 — 2026-11-25
+- `key_across_addresses`: one credential used from 3+ addresses **and** 5+ rejected
+  requests is one actor, not eight innocent ones. 3 points, 6 when 6+ addresses or
+  20+ rejections. A shared *working* key across egress addresses stays low, so the
+  rule cannot punish normal infrastructure. This closes the evasion that beat
+  every per-address rule (measured: 0/16 before, 16/16 after).
+- Corpus grows to 360 benign / 80 attack sessions with two new families
+  (`shared_egress_key`, `key_rotator`); held-out seed reproduces the numbers.
+- `key_clusters` is reported in the JSON output.
+- 75 tests.
+
 ## 0.4.0 — 2026-11-25
 - Deny list lifecycle: merge with the file on disk (a quiet run no longer lifts
   an unexpired block), drop expired entries, atomic replace, `--deny-max` refuses
