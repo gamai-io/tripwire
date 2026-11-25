@@ -1,0 +1,36 @@
+{
+ "deny": [
+  {
+   "expires": 1795602513,
+   "ip": "116.203.51.159",
+   "level": "medium",
+   "points": 3,
+   "rules": [
+    "ua_flip",
+    "velocity"
+   ]
+  },
+  {
+   "expires": 1795602513,
+   "ip": "16.170.14.81",
+   "level": "medium",
+   "points": 3,
+   "rules": [
+    "ua_flip",
+    "velocity"
+   ]
+  },
+  {
+   "expires": 1795602513,
+   "ip": "171.226.11.20",
+   "level": "medium",
+   "points": 3,
+   "rules": [
+    "ua_flip",
+    "velocity"
+   ]
+  }
+ ],
+ "generated": 1795598913,
+ "ttl_s": 3600
+}

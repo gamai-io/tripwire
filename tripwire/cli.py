@@ -32,6 +32,15 @@ def main(argv=None) -> int:
                          help="append control/alert records to this mandate ledger")
     p_watch.add_argument("--min-level", dest="min_level",
                          choices=("low", "medium", "high", "critical"), default="medium")
+    p_watch.add_argument("--format", choices=("auto", "jsonl", "combined"), default="auto",
+                         help="auto-detect, our JSONL, or nginx/Apache combined")
+    p_watch.add_argument("--deny-map", dest="deny_map", default=None,
+                         help="write an nginx deny list for flagged sources")
+    p_watch.add_argument("--deny-json", dest="deny_json", default=None,
+                         help="write the same list as JSON, with expiry per entry")
+    p_watch.add_argument("--deny-ttl", dest="deny_ttl", type=int, default=3600)
+    p_watch.add_argument("--ignore", action="append", default=None,
+                         help="address never to deny (repeatable, e.g. your scanner)")
 
     p_check = sub.add_parser("check", help="is this string a planted canary?")
     p_check.add_argument("--token", required=True)
@@ -60,14 +69,26 @@ def main(argv=None) -> int:
 
     if a.cmd == "watch":
         registry = canary.load(a.registry) if a.registry else {"canaries": []}
-        res = detect.watch(a.log, registry, a.window, a.ledger)
+        res = detect.watch(a.log, registry, a.window, a.ledger, a.format)
         order = {"low": 0, "medium": 1, "high": 2, "critical": 3}
         floor = order[a.min_level]
         flagged = {ip: s for ip, s in res["sessions"].items()
                    if order.get(s["level"], 0) >= floor}
+        deny = detect.deny_list(res, a.min_level, ttl_s=a.deny_ttl,
+                                ignore=set(a.ignore or ()))
+        for path, payload in ((a.deny_map, deny["nginx"]), (a.deny_json, None)):
+            if not path:
+                continue
+            with open(path, "w", encoding="utf-8") as fh:
+                if payload is None:
+                    json.dump(deny["json"], fh, indent=1, sort_keys=True)
+                else:
+                    fh.write(payload)
         _emit({"sources": res["sources"], "flagged": len(flagged),
                "canary_hits": len(res["canary_hits"]),
                "spec_derived_paths": len(res["spec_derived_paths"]),
+               "deny_entries": deny["count"],
+               "deny_skipped": len(deny["skipped"]),
                "sessions": flagged})
         return 0 if not flagged else 1
 

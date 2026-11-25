@@ -1,0 +1,111 @@
+"""Read access logs: our JSONL, nginx/Apache combined, or auto-detected.
+
+Every detector that only accepts a bespoke format is a detector nobody turns on.
+`nginx` and `apache` both default to the combined log format, so that is the
+second reader; the JSONL schema stays the richer one (it can carry the auth
+value, which is what the key-probing rule needs).
+"""
+from __future__ import annotations
+
+import json
+import re
+import time
+
+COMBINED = re.compile(
+    r'^(?P<ip>\S+) \S+ (?P<user>\S+) \[(?P<ts>[^\]]+)\] '
+    r'"(?P<request>[^"]*)" (?P<status>\d{3}) (?P<bytes>\d+|-) '
+    r'"(?P<referer>[^"]*)" "(?P<ua>[^"]*)"')
+
+_MONTHS = {m: i for i, m in enumerate(
+    ("Jan", "Feb", "Mar", "Apr", "May", "Jun",
+     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"), start=1)}
+
+
+def _parse_time(text: str) -> float | None:
+    """25/Nov/2026:00:00:22 +0100 -> epoch seconds (no locale dependency)."""
+    try:
+        date_part, zone = text.split(" ", 1)
+        day, month, rest = date_part.split("/")
+        year, hour, minute, second = rest.split(":")
+        sign = -1 if zone.startswith("-") else 1
+        offset = int(zone[1:3]) * 3600 + int(zone[3:5]) * 60
+        stamp = time.mktime((int(year), _MONTHS[month], int(day),
+                             int(hour), int(minute), int(second), 0, 0, -1))
+        return stamp - sign * offset
+    except (ValueError, KeyError, IndexError):
+        return None
+
+
+def _platform(ua: str) -> str:
+    low = (ua or "").lower()
+    if any(token in low for token in ("mobile", "android", "iphone", "ipad")):
+        return "mobile"
+    if low in ("", "-"):
+        return ""
+    return "desktop"
+
+
+def parse_combined(line: str) -> dict | None:
+    match = COMBINED.match(line.strip())
+    if not match:
+        return None
+    ts = _parse_time(match.group("ts"))
+    if ts is None:
+        return None
+    request = match.group("request")
+    parts = request.split()
+    if len(parts) >= 2:
+        method, path = parts[0], parts[1]
+    elif parts:
+        method, path = parts[0], ""
+    else:
+        method, path = "", ""
+    user = match.group("user")
+    ua = match.group("ua")
+    referer = match.group("referer")
+    return {
+        "ts": ts, "ip": match.group("ip"), "ua": "" if ua == "-" else ua,
+        "method": method or "GET", "path": path or "/",
+        "status": int(match.group("status")),
+        "auth": "none" if user in ("-", "") else user,
+        "referer": "" if referer == "-" else referer,
+        "ua_platform": _platform(ua),
+        "bytes": int(match.group("bytes")) if match.group("bytes") != "-" else 0,
+    }
+
+
+def guess_format(path: str) -> str:
+    with open(path, encoding="utf-8", errors="replace") as fh:
+        for _ in range(20):
+            line = fh.readline()
+            if not line.strip():
+                continue
+            if line.lstrip().startswith("{"):
+                return "jsonl"
+            if COMBINED.match(line.strip()):
+                return "combined"
+    return "jsonl"
+
+
+def load(path: str, fmt: str = "auto") -> list[dict]:
+    fmt = guess_format(path) if fmt in ("", "auto") else fmt
+    rows: list[dict] = []
+    with open(path, encoding="utf-8", errors="replace") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            if fmt == "combined":
+                row = parse_combined(line)
+            else:
+                try:
+                    row = json.loads(line)
+                except ValueError:
+                    continue
+                if not isinstance(row, dict):
+                    continue
+                if not row.get("ua_platform") and row.get("ua"):
+                    row["ua_platform"] = _platform(str(row["ua"]))
+            if row:
+                rows.append(row)
+    return rows

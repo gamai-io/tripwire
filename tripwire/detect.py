@@ -1,22 +1,30 @@
 """Behavioural detection for an inbound agent, on top of the access log.
 
-Two layers:
+Layer 1 — the rules shipped in `gama-mandate` (`mandate.agentwatch`): tool
+switching, UA flipping, following a link that only existed in a document, key
+probing, reading submit-only endpoints, velocity, low-and-slow scanning.
 
-1. The rules shipped in `gama-mandate` (`mandate.agentwatch`): tool switching,
-   UA flipping, following a link that only existed in a document, key probing,
-   reading submit-only endpoints, velocity, low-and-slow scanning.
-2. The two things an *inbound* detector needs and an authorisation log cannot
-   provide:
-   - **canary hits** — any use of a planted key is decisive on its own;
-   - **spec-derived novel paths** — a path whose first appearance follows a
-     request for an API document within 60 seconds. A human does not move from
-     reading a spec to a never-seen endpoint that fast; a script does.
+Layer 2 — what an inbound detector needs and an authorisation log cannot give:
+  - **canaries**: any use of a planted key is decisive on its own;
+  - **spec-derived novel paths**: a first request to a path right after an API
+    document was served;
+  - **auth failure streak**: five or more rejected credentials on one endpoint
+    inside a minute;
+  - **wide probe**: twenty-five or more distinct paths answering 4xx.
 
-Levels: any canary hit is `critical`; otherwise the mandate score applies
-(>=6 high, >=3 medium). A judge model may explain a finding, never lower it.
+Layer 3 — corroboration. Reading documentation is not an attack: a developer
+opens the spec and then calls the API with a key that works. So the two
+document-related findings only count when the same address also **failed an
+authentication check** (`401`/`403`) inside the window, or a canary fired. That
+single condition is what separated the reported intruder from a normal reader,
+and it is measured in `docs/FALSE_POSITIVES.md` rather than asserted here.
+
+Levels: any canary hit is `critical`; otherwise >=6 high, >=3 medium.
+A judge model may explain a finding, never lower it.
 """
 from __future__ import annotations
 
+import ipaddress
 import time
 import urllib.parse
 from collections import defaultdict
@@ -25,13 +33,30 @@ from mandate import agentwatch
 from mandate.core import append_receipt
 
 from . import canary as canary_mod
+from . import logread
 
 SPEC_TOKENS = ("/openapi", "/swagger", "/docs", ".md", "/spec", "/redoc")
+DOC_RULES = {"docs_link_follow", "spec_derived_novel_path"}
+FAILED = (401, 403)
+# tool_switch alone is a developer, not an intruder: measured at 50/300 benign
+# sessions in docs/FALSE_POSITIVES.md, so it weighs 2 and needs corroboration.
+WEIGHTS = {"tool_switch": 2}
+HIGH, MEDIUM = agentwatch.THRESHOLDS["high"], agentwatch.THRESHOLDS["medium"]
 
 
 def is_doc_path(path: str) -> bool:
     p = (path or "").lower()
     return any(token in p for token in SPEC_TOKENS)
+
+
+def _level(points: int, critical: bool = False) -> str:
+    if critical:
+        return "critical"
+    if points >= HIGH:
+        return "high"
+    if points >= MEDIUM:
+        return "medium"
+    return "low"
 
 
 def spec_derived_paths(rows: list[dict], max_gap: float = 60.0) -> list[dict]:
@@ -47,29 +72,75 @@ def spec_derived_paths(rows: list[dict], max_gap: float = 60.0) -> list[dict]:
             path = str(row.get("path") or "")
             ts = float(row.get("ts") or 0)
             is_doc = is_doc_path(path)          # the path we served, not the Referer
+            status = int(row.get("status") or 0)
             if not is_doc and path not in seen and last_doc_ts is not None \
                     and 0 <= ts - last_doc_ts <= max_gap:
                 out.append({"ip": ip, "path": path, "ts": ts,
                             "seconds_after_doc": round(ts - last_doc_ts, 1)})
-            if is_doc:
+                last_doc_ts = None      # one document, one followed link (the incident shape)
+            if is_doc and status in (0, 200, 206):
                 last_doc_ts = ts
             seen.add(path)
     return out
 
 
-def _raise_level(session: dict, points: int, level: str | None = None) -> None:
-    session["points"] += points
-    if session["points"] >= agentwatch.THRESHOLDS["high"]:
-        session["level"] = "high"
-    elif session["points"] >= agentwatch.THRESHOLDS["medium"]:
-        session["level"] = "medium"
-    if level is not None:
-        session["level"] = level
+def auth_failure_streak(rows: list[dict], count: int = 5, within: float = 60.0) -> list[dict]:
+    """Five or more rejected credentials on one path inside a minute."""
+    by_key = defaultdict(list)
+    for row in rows:
+        if int(row.get("status") or 0) not in FAILED:
+            continue
+        by_key[(str(row.get("ip") or "?"), str(row.get("path") or ""))].append(
+            float(row.get("ts") or 0))
+    out = []
+    for (ip, path), stamps in by_key.items():
+        stamps.sort()
+        for i, start in enumerate(stamps):
+            window = [t for t in stamps[i:] if t - start <= within]
+            if len(window) >= count:
+                out.append({"ip": ip, "path": path, "attempts": len(window),
+                            "seconds": round(window[-1] - window[0], 1)})
+                break
+    return out
+
+
+def wide_probe(rows: list[dict], threshold: int = 25) -> list[dict]:
+    """Many distinct paths answering 4xx from one address."""
+    by_ip = defaultdict(set)
+    for row in rows:
+        if 400 <= int(row.get("status") or 0) < 500:
+            by_ip[str(row.get("ip") or "?")].add(str(row.get("path") or ""))
+    return [{"ip": ip, "paths": len(paths)} for ip, paths in by_ip.items()
+            if len(paths) >= threshold]
+
+
+def _failed_here(rows: list[dict]) -> bool:
+    return any(int(r.get("status") or 0) in FAILED for r in rows)
+
+
+def _corroborate(session: dict, failure: bool, canary: bool) -> None:
+    """Demote document findings when nothing else about the session is suspicious."""
+    if failure or canary:
+        return
+    kept = []
+    for finding in session["findings"]:
+        if finding["rule"] in DOC_RULES:
+            finding = dict(finding)
+            finding["suppressed"] = True
+            finding["why"] = ("documentation reading without a failed auth check; "
+                              "not counted")
+            session["points"] -= finding["points"]
+        kept.append(finding)
+    session["findings"] = kept
+    session["level"] = _level(max(0, session["points"]))
 
 
 def analyse(rows: list[dict], registry: dict | None = None, window: int = 600,
             now: float | None = None) -> dict:
     base = agentwatch.analyse(rows, window=window, now=now)
+    by_ip = defaultdict(list)
+    for row in rows:
+        by_ip[str(row.get("ip") or "?")].append(row)
 
     canary_hits = []
     for row in rows:
@@ -80,15 +151,34 @@ def analyse(rows: list[dict], registry: dict | None = None, window: int = 600,
             canary_hits.append({"ip": row.get("ip"), "ts": row.get("ts"),
                                 "path": row.get("path"), "canary": hit.get("id")})
 
-    spec_paths = spec_derived_paths(rows)
-    for item in spec_paths:
+    for item in spec_derived_paths(rows):
         session = base["sessions"].get(item["ip"])
         if session is not None:
             session["findings"].append({
                 "rule": "spec_derived_novel_path", "points": 3,
                 "detail": "first request to %s %.1fs after an API document"
                           % (item["path"], item["seconds_after_doc"])})
-            _raise_level(session, 3)
+            session["points"] += 3
+            session["level"] = _level(session["points"])
+
+    for item in auth_failure_streak(rows):
+        session = base["sessions"].get(item["ip"])
+        if session is not None:
+            session["findings"].append({
+                "rule": "auth_failure_streak", "points": 4,
+                "detail": "%d rejected credentials on %s in %.0fs"
+                          % (item["attempts"], item["path"], max(item["seconds"], 1))})
+            session["points"] += 4
+            session["level"] = _level(session["points"])
+
+    for item in wide_probe(rows):
+        session = base["sessions"].get(item["ip"])
+        if session is not None:
+            session["findings"].append({
+                "rule": "wide_probe", "points": 2,
+                "detail": "%d distinct paths answered 4xx" % item["paths"]})
+            session["points"] += 2
+            session["level"] = _level(session["points"])
 
     for hit in canary_hits:
         session = base["sessions"].get(str(hit["ip"]))
@@ -96,17 +186,32 @@ def analyse(rows: list[dict], registry: dict | None = None, window: int = 600,
             session["findings"].append({
                 "rule": "canary_used", "points": 10,
                 "detail": "planted key %s used on %s" % (hit["canary"], hit["path"])})
-            _raise_level(session, 10, "critical")
+            session["points"] += 10
+            session["level"] = "critical"
+
+    for session in base["sessions"].values():
+        for finding in session["findings"]:
+            want = WEIGHTS.get(finding["rule"])
+            if want is not None and finding["points"] != want:
+                session["points"] += want - finding["points"]
+                finding["points"] = want
+        session["level"] = _level(max(0, session["points"]),
+                                  session["level"] == "critical")
+
+    for ip, session in base["sessions"].items():
+        hit = any(str(h["ip"]) == ip for h in canary_hits)
+        _corroborate(session, _failed_here(by_ip.get(ip, [])), hit)
 
     return {"window_s": window, "sources": base["sources"],
             "flagged": sum(1 for s in base["sessions"].values() if s["level"] != "low"),
-            "canary_hits": canary_hits, "spec_derived_paths": spec_paths,
+            "canary_hits": canary_hits, "spec_derived_paths": spec_derived_paths(rows),
+            "auth_failure_streaks": auth_failure_streak(rows),
             "sessions": base["sessions"]}
 
 
 def watch(log_path: str, registry: dict | None = None, window: int = 600,
-          ledger: str | None = None) -> dict:
-    rows = agentwatch.load(log_path)
+          ledger: str | None = None, fmt: str = "auto") -> dict:
+    rows = logread.load(log_path, fmt)
     result = analyse(rows, registry, window)
     if ledger:
         alerts = {ip: s for ip, s in result["sessions"].items() if s["level"] != "low"}
@@ -114,7 +219,60 @@ def watch(log_path: str, registry: dict | None = None, window: int = 600,
             append_receipt(ledger, {"v": 1, "type": "control", "action": "alert",
                                     "actor": "tripwire",
                                     "reason": "inbound agent behaviour",
-                                    "ts": time.time(),
+                                    "ts": time.time(), "log": log_path,
                                     "canary_hits": result["canary_hits"],
                                     "findings": alerts})
     return result
+
+
+def _blockable(ip: str) -> bool:
+    """Only global unicast addresses may be denied.
+
+    A loopback or private address in the log is our own health check, our own
+    scanner, or a reverse proxy: blocking it would take the service down, not
+    the intruder. The denial is therefore skipped and reported, never quietly
+    applied.
+    """
+    try:
+        return ipaddress.ip_address(ip).is_global
+    except ValueError:
+        return False
+
+
+def deny_list(result: dict, min_level: str = "medium", now: float | None = None,
+              ttl_s: int = 3600, ignore: set[str] | None = None) -> dict:
+    """Turn findings into an edge block list (nginx `deny` lines + JSON entries).
+
+    The list is meant to be rewritten on a timer: every entry carries the epoch
+    when it should disappear, so a cron that re-runs `tripwire watch --deny-map`
+    both adds and removes addresses without a second mechanism.
+    """
+    order = {"low": 0, "medium": 1, "high": 2, "critical": 3}
+    floor = order.get(min_level, 1)
+    moment = time.time() if now is None else now
+    entries = []
+    skipped = []
+    ignore = ignore or set()
+    for ip, session in sorted(result["sessions"].items()):
+        if order.get(session["level"], 0) < floor:
+            continue
+        if ip in ignore or not _blockable(ip):
+            skipped.append({"ip": ip, "level": session["level"],
+                            "why": "ignored" if ip in ignore else "not a global address"})
+            continue
+        entries.append({"ip": ip, "level": session["level"], "points": session["points"],
+                        "expires": int(moment + ttl_s),
+                        "rules": sorted({f["rule"] for f in session["findings"]
+                                         if not f.get("suppressed")})})
+    lines = ["# tripwire deny list, generated %s, ttl %ds"
+             % (time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(moment)), ttl_s)]
+    for entry in entries:
+        lines.append("# %s %s points=%d expires=%d rules=%s"
+                     % (entry["ip"], entry["level"], entry["points"], entry["expires"],
+                        ",".join(entry["rules"])))
+        lines.append("deny %s;" % entry["ip"])
+    for item in skipped:
+        lines.append("# skipped %s (%s)" % (item["ip"], item["why"]))
+    return {"entries": entries, "count": len(entries), "skipped": skipped,
+            "nginx": "\n".join(lines) + "\n",
+            "json": {"generated": int(moment), "ttl_s": ttl_s, "deny": entries}}

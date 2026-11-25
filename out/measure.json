@@ -1,0 +1,4036 @@
+{
+ "sessions": [
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_reader",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "human_docs",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "developer_curl",
+   "label": "benign",
+   "level": "low",
+   "points": 2,
+   "rules": [
+    "tool_switch"
+   ],
+   "suppressed": [
+    "docs_link_follow",
+    "spec_derived_novel_path"
+   ]
+  },
+  {
+   "canary": false,
+   "kind": "crawler",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "api_client",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "monitoring",
+   "label": "benign",
+   "level": "low",
+   "points": 0,
+   "rules": [],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "incident",
+   "label": "attack",
+   "level": "high",
+   "points": 16,
+   "rules": [
+    "docs_link_follow",
+    "key_probing",
+    "read_after_submit",
+    "spec_derived_novel_path",
+    "tool_switch",
+    "ua_flip"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "key_prober",
+   "label": "attack",
+   "level": "high",
+   "points": 8,
+   "rules": [
+    "auth_failure_streak",
+    "key_probing"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "slow_scanner",
+   "label": "attack",
+   "level": "medium",
+   "points": 4,
+   "rules": [
+    "low_and_slow_scan",
+    "wide_probe"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "docs_crawler",
+   "label": "attack",
+   "level": "high",
+   "points": 8,
+   "rules": [
+    "docs_link_follow",
+    "low_and_slow_scan",
+    "spec_derived_novel_path"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "incident",
+   "label": "attack",
+   "level": "high",
+   "points": 16,
+   "rules": [
+    "docs_link_follow",
+    "key_probing",
+    "read_after_submit",
+    "spec_derived_novel_path",
+    "tool_switch",
+    "ua_flip"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "key_prober",
+   "label": "attack",
+   "level": "high",
+   "points": 8,
+   "rules": [
+    "auth_failure_streak",
+    "key_probing"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "slow_scanner",
+   "label": "attack",
+   "level": "medium",
+   "points": 4,
+   "rules": [
+    "low_and_slow_scan",
+    "wide_probe"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "docs_crawler",
+   "label": "attack",
+   "level": "high",
+   "points": 8,
+   "rules": [
+    "docs_link_follow",
+    "low_and_slow_scan",
+    "spec_derived_novel_path"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "incident",
+   "label": "attack",
+   "level": "high",
+   "points": 16,
+   "rules": [
+    "docs_link_follow",
+    "key_probing",
+    "read_after_submit",
+    "spec_derived_novel_path",
+    "tool_switch",
+    "ua_flip"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "key_prober",
+   "label": "attack",
+   "level": "high",
+   "points": 8,
+   "rules": [
+    "auth_failure_streak",
+    "key_probing"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "slow_scanner",
+   "label": "attack",
+   "level": "medium",
+   "points": 4,
+   "rules": [
+    "low_and_slow_scan",
+    "wide_probe"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "docs_crawler",
+   "label": "attack",
+   "level": "high",
+   "points": 8,
+   "rules": [
+    "docs_link_follow",
+    "low_and_slow_scan",
+    "spec_derived_novel_path"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "incident",
+   "label": "attack",
+   "level": "high",
+   "points": 16,
+   "rules": [
+    "docs_link_follow",
+    "key_probing",
+    "read_after_submit",
+    "spec_derived_novel_path",
+    "tool_switch",
+    "ua_flip"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "key_prober",
+   "label": "attack",
+   "level": "high",
+   "points": 8,
+   "rules": [
+    "auth_failure_streak",
+    "key_probing"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "slow_scanner",
+   "label": "attack",
+   "level": "medium",
+   "points": 4,
+   "rules": [
+    "low_and_slow_scan",
+    "wide_probe"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "docs_crawler",
+   "label": "attack",
+   "level": "high",
+   "points": 8,
+   "rules": [
+    "docs_link_follow",
+    "low_and_slow_scan",
+    "spec_derived_novel_path"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "incident",
+   "label": "attack",
+   "level": "high",
+   "points": 16,
+   "rules": [
+    "docs_link_follow",
+    "key_probing",
+    "read_after_submit",
+    "spec_derived_novel_path",
+    "tool_switch",
+    "ua_flip"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "key_prober",
+   "label": "attack",
+   "level": "high",
+   "points": 8,
+   "rules": [
+    "auth_failure_streak",
+    "key_probing"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "slow_scanner",
+   "label": "attack",
+   "level": "medium",
+   "points": 4,
+   "rules": [
+    "low_and_slow_scan",
+    "wide_probe"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "docs_crawler",
+   "label": "attack",
+   "level": "high",
+   "points": 8,
+   "rules": [
+    "docs_link_follow",
+    "low_and_slow_scan",
+    "spec_derived_novel_path"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "incident",
+   "label": "attack",
+   "level": "high",
+   "points": 16,
+   "rules": [
+    "docs_link_follow",
+    "key_probing",
+    "read_after_submit",
+    "spec_derived_novel_path",
+    "tool_switch",
+    "ua_flip"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "key_prober",
+   "label": "attack",
+   "level": "high",
+   "points": 8,
+   "rules": [
+    "auth_failure_streak",
+    "key_probing"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "slow_scanner",
+   "label": "attack",
+   "level": "medium",
+   "points": 4,
+   "rules": [
+    "low_and_slow_scan",
+    "wide_probe"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "docs_crawler",
+   "label": "attack",
+   "level": "high",
+   "points": 8,
+   "rules": [
+    "docs_link_follow",
+    "low_and_slow_scan",
+    "spec_derived_novel_path"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "incident",
+   "label": "attack",
+   "level": "high",
+   "points": 16,
+   "rules": [
+    "docs_link_follow",
+    "key_probing",
+    "read_after_submit",
+    "spec_derived_novel_path",
+    "tool_switch",
+    "ua_flip"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "key_prober",
+   "label": "attack",
+   "level": "high",
+   "points": 8,
+   "rules": [
+    "auth_failure_streak",
+    "key_probing"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "slow_scanner",
+   "label": "attack",
+   "level": "medium",
+   "points": 4,
+   "rules": [
+    "low_and_slow_scan",
+    "wide_probe"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "docs_crawler",
+   "label": "attack",
+   "level": "high",
+   "points": 8,
+   "rules": [
+    "docs_link_follow",
+    "low_and_slow_scan",
+    "spec_derived_novel_path"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "incident",
+   "label": "attack",
+   "level": "high",
+   "points": 16,
+   "rules": [
+    "docs_link_follow",
+    "key_probing",
+    "read_after_submit",
+    "spec_derived_novel_path",
+    "tool_switch",
+    "ua_flip"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "key_prober",
+   "label": "attack",
+   "level": "high",
+   "points": 8,
+   "rules": [
+    "auth_failure_streak",
+    "key_probing"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "slow_scanner",
+   "label": "attack",
+   "level": "medium",
+   "points": 4,
+   "rules": [
+    "low_and_slow_scan",
+    "wide_probe"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "docs_crawler",
+   "label": "attack",
+   "level": "high",
+   "points": 8,
+   "rules": [
+    "docs_link_follow",
+    "low_and_slow_scan",
+    "spec_derived_novel_path"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "incident",
+   "label": "attack",
+   "level": "high",
+   "points": 16,
+   "rules": [
+    "docs_link_follow",
+    "key_probing",
+    "read_after_submit",
+    "spec_derived_novel_path",
+    "tool_switch",
+    "ua_flip"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "key_prober",
+   "label": "attack",
+   "level": "high",
+   "points": 8,
+   "rules": [
+    "auth_failure_streak",
+    "key_probing"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "slow_scanner",
+   "label": "attack",
+   "level": "medium",
+   "points": 4,
+   "rules": [
+    "low_and_slow_scan",
+    "wide_probe"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "docs_crawler",
+   "label": "attack",
+   "level": "high",
+   "points": 8,
+   "rules": [
+    "docs_link_follow",
+    "low_and_slow_scan",
+    "spec_derived_novel_path"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "incident",
+   "label": "attack",
+   "level": "high",
+   "points": 16,
+   "rules": [
+    "docs_link_follow",
+    "key_probing",
+    "read_after_submit",
+    "spec_derived_novel_path",
+    "tool_switch",
+    "ua_flip"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "key_prober",
+   "label": "attack",
+   "level": "high",
+   "points": 8,
+   "rules": [
+    "auth_failure_streak",
+    "key_probing"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "slow_scanner",
+   "label": "attack",
+   "level": "medium",
+   "points": 4,
+   "rules": [
+    "low_and_slow_scan",
+    "wide_probe"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "docs_crawler",
+   "label": "attack",
+   "level": "high",
+   "points": 8,
+   "rules": [
+    "docs_link_follow",
+    "low_and_slow_scan",
+    "spec_derived_novel_path"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "incident",
+   "label": "attack",
+   "level": "high",
+   "points": 16,
+   "rules": [
+    "docs_link_follow",
+    "key_probing",
+    "read_after_submit",
+    "spec_derived_novel_path",
+    "tool_switch",
+    "ua_flip"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "key_prober",
+   "label": "attack",
+   "level": "high",
+   "points": 8,
+   "rules": [
+    "auth_failure_streak",
+    "key_probing"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "slow_scanner",
+   "label": "attack",
+   "level": "medium",
+   "points": 4,
+   "rules": [
+    "low_and_slow_scan",
+    "wide_probe"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "docs_crawler",
+   "label": "attack",
+   "level": "high",
+   "points": 8,
+   "rules": [
+    "docs_link_follow",
+    "low_and_slow_scan",
+    "spec_derived_novel_path"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "incident",
+   "label": "attack",
+   "level": "high",
+   "points": 16,
+   "rules": [
+    "docs_link_follow",
+    "key_probing",
+    "read_after_submit",
+    "spec_derived_novel_path",
+    "tool_switch",
+    "ua_flip"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "key_prober",
+   "label": "attack",
+   "level": "high",
+   "points": 8,
+   "rules": [
+    "auth_failure_streak",
+    "key_probing"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "slow_scanner",
+   "label": "attack",
+   "level": "medium",
+   "points": 4,
+   "rules": [
+    "low_and_slow_scan",
+    "wide_probe"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "docs_crawler",
+   "label": "attack",
+   "level": "high",
+   "points": 8,
+   "rules": [
+    "docs_link_follow",
+    "low_and_slow_scan",
+    "spec_derived_novel_path"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "incident",
+   "label": "attack",
+   "level": "high",
+   "points": 16,
+   "rules": [
+    "docs_link_follow",
+    "key_probing",
+    "read_after_submit",
+    "spec_derived_novel_path",
+    "tool_switch",
+    "ua_flip"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "key_prober",
+   "label": "attack",
+   "level": "high",
+   "points": 8,
+   "rules": [
+    "auth_failure_streak",
+    "key_probing"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "slow_scanner",
+   "label": "attack",
+   "level": "medium",
+   "points": 4,
+   "rules": [
+    "low_and_slow_scan",
+    "wide_probe"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "docs_crawler",
+   "label": "attack",
+   "level": "high",
+   "points": 8,
+   "rules": [
+    "docs_link_follow",
+    "low_and_slow_scan",
+    "spec_derived_novel_path"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "incident",
+   "label": "attack",
+   "level": "high",
+   "points": 16,
+   "rules": [
+    "docs_link_follow",
+    "key_probing",
+    "read_after_submit",
+    "spec_derived_novel_path",
+    "tool_switch",
+    "ua_flip"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "key_prober",
+   "label": "attack",
+   "level": "high",
+   "points": 8,
+   "rules": [
+    "auth_failure_streak",
+    "key_probing"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "slow_scanner",
+   "label": "attack",
+   "level": "medium",
+   "points": 4,
+   "rules": [
+    "low_and_slow_scan",
+    "wide_probe"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "docs_crawler",
+   "label": "attack",
+   "level": "high",
+   "points": 8,
+   "rules": [
+    "docs_link_follow",
+    "low_and_slow_scan",
+    "spec_derived_novel_path"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "incident",
+   "label": "attack",
+   "level": "high",
+   "points": 16,
+   "rules": [
+    "docs_link_follow",
+    "key_probing",
+    "read_after_submit",
+    "spec_derived_novel_path",
+    "tool_switch",
+    "ua_flip"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "key_prober",
+   "label": "attack",
+   "level": "high",
+   "points": 8,
+   "rules": [
+    "auth_failure_streak",
+    "key_probing"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "slow_scanner",
+   "label": "attack",
+   "level": "medium",
+   "points": 4,
+   "rules": [
+    "low_and_slow_scan",
+    "wide_probe"
+   ],
+   "suppressed": []
+  },
+  {
+   "canary": false,
+   "kind": "docs_crawler",
+   "label": "attack",
+   "level": "high",
+   "points": 8,
+   "rules": [
+    "docs_link_follow",
+    "low_and_slow_scan",
+    "spec_derived_novel_path"
+   ],
+   "suppressed": []
+  }
+ ],
+ "summary": {
+  "attack_by_kind": {
+   "docs_crawler": {
+    "critical": 0,
+    "high": 15,
+    "low": 0,
+    "medium": 0,
+    "sessions": 15
+   },
+   "incident": {
+    "critical": 0,
+    "high": 15,
+    "low": 0,
+    "medium": 0,
+    "sessions": 15
+   },
+   "key_prober": {
+    "critical": 0,
+    "high": 15,
+    "low": 0,
+    "medium": 0,
+    "sessions": 15
+   },
+   "slow_scanner": {
+    "critical": 0,
+    "high": 0,
+    "low": 0,
+    "medium": 15,
+    "sessions": 15
+   }
+  },
+  "attack_detected_any": 60,
+  "attack_detected_high": 45,
+  "attack_recall_any": 1.0,
+  "attack_recall_high": 0.75,
+  "attack_sessions": 60,
+  "benign_by_kind": {
+   "api_client": {
+    "critical": 0,
+    "high": 0,
+    "low": 50,
+    "medium": 0,
+    "sessions": 50
+   },
+   "crawler": {
+    "critical": 0,
+    "high": 0,
+    "low": 50,
+    "medium": 0,
+    "sessions": 50
+   },
+   "developer_curl": {
+    "critical": 0,
+    "high": 0,
+    "low": 50,
+    "medium": 0,
+    "sessions": 50
+   },
+   "human_docs": {
+    "critical": 0,
+    "high": 0,
+    "low": 50,
+    "medium": 0,
+    "sessions": 50
+   },
+   "human_reader": {
+    "critical": 0,
+    "high": 0,
+    "low": 50,
+    "medium": 0,
+    "sessions": 50
+   },
+   "monitoring": {
+    "critical": 0,
+    "high": 0,
+    "low": 50,
+    "medium": 0,
+    "sessions": 50
+   }
+  },
+  "benign_fp_rate_any": 0.0,
+  "benign_fp_rate_high": 0.0,
+  "benign_high_or_critical": 0,
+  "benign_medium_or_higher": 0,
+  "benign_sessions": 300,
+  "false_positive_rules": {}
+ }
+}
