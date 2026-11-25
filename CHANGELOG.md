@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.4.0 — 2026-11-25
+- Deny list lifecycle: merge with the file on disk (a quiet run no longer lifts
+  an unexpired block), drop expired entries, atomic replace, `--deny-max` refuses
+  instead of writing a list that costs nginx throughput, `--reload-cmd` runs only
+  after a good write and reports its exit status.
+- Fail-closed: a corrupt or malformed canary registry exits **4** instead of
+  reporting "not planted"; a missing or unparsable log exits **3** instead of 0;
+  torn lines are counted (`skipped_lines`).
+- `packaging/`: systemd unit + timer, logrotate; `docs/OPERATIONS.md` with exit
+  codes, sizing and measured throughput.
+- Perf, measured: 100k lines on one path with **one** key 658 s -> **1.20 s**;
+  300k lines 5.6 s analyse, 303 MB.
+- 69 tests.
+
 ## 0.3.0 — 2026-11-25
 - `--state` / `--state-ttl`: a cron no longer repeats the same alert every
   minute; escalation is new again, the file is pruned and replaced atomically.

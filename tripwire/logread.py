@@ -143,14 +143,17 @@ def _open(path: str):
     return open(path, encoding="utf-8", errors="replace")
 
 
-def load(path: str, fmt: str = "auto", trusted: list | None = None) -> list[dict]:
+def load_stats(path: str, fmt: str = "auto",
+               trusted: list | None = None) -> tuple[list[dict], dict]:
     fmt = guess_format(path) if fmt in ("", "auto") else fmt
     rows: list[dict] = []
+    stats = {"lines": 0, "skipped": 0, "format": fmt}
     with _open(path) as fh:
         for line in fh:
             line = line.strip()
             if not line:
                 continue
+            stats["lines"] += 1
             if fmt == "combined":
                 row = parse_combined(line)
             else:
@@ -164,4 +167,10 @@ def load(path: str, fmt: str = "auto", trusted: list | None = None) -> list[dict
                     row["ua_platform"] = _platform(str(row["ua"]))
             if row:
                 rows.append(resolve_client(row, trusted))
-    return rows
+            else:
+                stats["skipped"] += 1
+    return rows, stats
+
+
+def load(path: str, fmt: str = "auto", trusted: list | None = None) -> list[dict]:
+    return load_stats(path, fmt, trusted)[0]

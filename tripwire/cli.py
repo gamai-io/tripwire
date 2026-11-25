@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
 
 from . import canary, detect
@@ -26,7 +27,8 @@ def main(argv=None) -> int:
 
     p_watch = sub.add_parser("watch", help="score an access log")
     p_watch.add_argument("--log", required=True)
-    p_watch.add_argument("--registry", default="canaries.json")
+    p_watch.add_argument("--registry", default=None,
+                         help="canary registry; omit to run without canaries")
     p_watch.add_argument("--window", type=int, default=detect.agentwatch.WINDOW)
     p_watch.add_argument("--ledger", default=None,
                          help="append control/alert records to this mandate ledger")
@@ -44,6 +46,12 @@ def main(argv=None) -> int:
     p_watch.add_argument("--state", default=None,
                          help="JSON file remembering alerts, so a cron does not repeat them")
     p_watch.add_argument("--state-ttl", dest="state_ttl", type=int, default=3600)
+    p_watch.add_argument("--deny-max", dest="deny_max", type=int, default=1000,
+                         help="refuse to write more entries than this (a huge list "
+                              "costs nginx throughput and hides a bug)")
+    p_watch.add_argument("--reload-cmd", dest="reload_cmd", default=None,
+                         help="command to run after the list changes, e.g. "
+                              "'nginx -t && nginx -s reload'")
     p_watch.add_argument("--deny-unsafe", dest="deny_unsafe", action="store_true",
                          help="also deny on volume evidence alone (CDN/NAT risk)")
     p_watch.add_argument("--trusted-proxy", dest="trusted_proxy", action="append",
@@ -79,7 +87,12 @@ def main(argv=None) -> int:
         return 0
 
     if a.cmd == "watch":
-        registry = canary.load(a.registry) if a.registry else {"canaries": []}
+        try:
+            registry = canary.load(a.registry, strict=True) if a.registry else {"canaries": []}
+        except canary.RegistryError as exc:
+            _emit({"error": "RegistryError",
+                   "message": "refusing to run without a usable canary registry: %s" % exc})
+            return 4
         now = None
         if a.now == "wall":
             import time as _time
@@ -88,42 +101,58 @@ def main(argv=None) -> int:
             try:
                 now = float(a.now)
             except ValueError:
-                _emit({"error": "Usage", "message": "--now takes 'file', 'wall' or an epoch"}, None)
+                _emit({"error": "Usage", "message": "--now takes 'file', 'wall' or an epoch"})
                 return 2
-        res = detect.watch(a.log, registry, a.window, a.ledger, a.format, now=now,
-                           trusted=a.trusted_proxy)
+        try:
+            res = detect.watch(a.log, registry, a.window, a.ledger, a.format, now=now,
+                               trusted=a.trusted_proxy)
+        except OSError as exc:
+            _emit({"error": "Unreadable", "message": str(exc)})
+            return 3
+        if res.get("empty"):
+            _emit({"sources": 0, "flagged": 0, "rows": 0,
+                   "skipped_lines": res.get("skipped_lines", 0),
+                   "error": "no rows",
+                   "message": "the file has no parsable lines for format %r"
+                              % res.get("log_format")})
+            return 3
         order = {"low": 0, "medium": 1, "high": 2, "critical": 3}
         floor = order[a.min_level]
         flagged = {ip: s for ip, s in res["sessions"].items()
                    if order.get(s["level"], 0) >= floor}
         if a.state:
             res = detect.apply_state(res, a.state, a.state_ttl)
-        deny = detect.deny_list(res, a.min_level, ttl_s=a.deny_ttl,
-                                ignore=set(a.ignore or ()),
-                                allow_volume=a.deny_unsafe)
-        for path, payload in ((a.deny_map, deny["nginx"]), (a.deny_json, None)):
-            if not path:
-                continue
-            with open(path, "w", encoding="utf-8") as fh:
-                if payload is None:
-                    json.dump(deny["json"], fh, indent=1, sort_keys=True)
-                else:
-                    fh.write(payload)
-        if res.get("empty"):
-            _emit({"sources": 0, "flagged": 0, "rows": 0,
-                   "error": "no rows", "message": "the file has no parsable lines"}, None)
-            return 3
-        _emit({"sources": res["sources"], "rows": res.get("rows"), "flagged": len(flagged),
+        deny = detect.write_deny_files(res, a.deny_map, a.deny_json,
+                                       min_level=a.min_level, ttl_s=a.deny_ttl,
+                                       ignore=set(a.ignore or ()),
+                                       allow_volume=a.deny_unsafe, cap=a.deny_max)
+        if deny.get("error"):
+            _emit({"error": "DenyRefused", "message": deny["error"],
+                   "sessions": flagged}, None)
+            return 4
+        reload_status = None
+        if a.reload_cmd and deny["count"]:
+            done = subprocess.run(a.reload_cmd, shell=True, capture_output=True, text=True)
+            reload_status = {"command": a.reload_cmd, "exit": done.returncode,
+                             "stderr": done.stderr.strip()[:200]}
+        _emit({"sources": res["sources"], "rows": res.get("rows"),
+               "skipped_lines": res.get("skipped_lines", 0),
+               "flagged": len(flagged),
                "canary_hits": len(res["canary_hits"]),
                "spec_derived_paths": len(res["spec_derived_paths"]),
                "deny_entries": deny["count"],
                "new_alerts": res.get("new_alerts", len(flagged)),
                "deny_skipped": len(deny["skipped"]),
+               "reload": reload_status,
                "sessions": flagged})
         return 0 if not flagged else 1
 
     if a.cmd == "check":
-        hits = canary.match(a.token, canary.load(a.registry))
+        try:
+            hits = canary.match(a.token, canary.load(a.registry, strict=True))
+        except canary.RegistryError as exc:
+            _emit({"error": "RegistryError", "message": str(exc)})
+            return 4
         _emit({"planted": bool(hits), "canaries": [h.get("id") for h in hits]})
         return 0 if hits else 1
 

@@ -32,16 +32,28 @@ def _write(path: str, data: dict) -> None:
         json.dump(data, fh, indent=1, sort_keys=True)
 
 
-def load(path: str = "canaries.json") -> dict:
+class RegistryError(Exception):
+    """The registry exists but cannot be used. Never treat this as 'no canaries'."""
+
+
+def load(path: str = "canaries.json", strict: bool = False) -> dict:
     if not os.path.exists(path):
         return {"version": 1, "canaries": []}
-    with open(path, encoding="utf-8") as fh:
-        try:
+    try:
+        with open(path, encoding="utf-8") as fh:
             data = json.load(fh)
-        except ValueError:
-            return {"version": 1, "canaries": []}
-    if not isinstance(data, dict) or not isinstance(data.get("canaries"), list):
+    except ValueError as exc:
+        if strict:
+            raise RegistryError("%s is not valid JSON: %s" % (path, exc)) from exc
         return {"version": 1, "canaries": []}
+    if not isinstance(data, dict) or not isinstance(data.get("canaries"), list):
+        if strict:
+            raise RegistryError("%s has no canaries list" % path)
+        return {"version": 1, "canaries": []}
+    for item in data["canaries"]:
+        if not isinstance(item, dict) or "sha256" not in item:
+            if strict:
+                raise RegistryError("%s has a malformed entry" % path)
     return data
 
 

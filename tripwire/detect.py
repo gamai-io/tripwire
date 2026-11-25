@@ -27,6 +27,7 @@ from __future__ import annotations
 import ipaddress
 import json
 import os
+import re
 import tempfile
 import time
 import urllib.parse
@@ -249,11 +250,13 @@ def watch(log_path: str, registry: dict | None = None, window: int = 600,
     still analysed instead of silently producing "0 sources, 0 flagged". Pass
     `now=time.time()` for live tailing.
     """
-    rows = logread.load(log_path, fmt, trusted)
+    rows, stats = logread.load_stats(log_path, fmt, trusted)
     if now is None and rows:
         now = max(float(r.get("ts") or 0) for r in rows) + 1
     result = analyse(rows, registry, window, now=now)
     result["rows"] = len(rows)
+    result["skipped_lines"] = stats.get("skipped", 0)
+    result["log_format"] = stats.get("format")
     result["empty"] = not rows
     result["now"] = now
     if ledger:
@@ -393,9 +396,37 @@ def apply_state(result: dict, state_path: str, ttl_s: int = 3600,
     return result
 
 
+DENY_ENTRY = re.compile(
+    r"^# (?P<ip>\S+) (?P<level>\w+) points=(?P<points>\d+) expires=(?P<expires>\d+) "
+    r"rules=(?P<rules>\S*) reason=(?P<reason>.*)$")
+
+
+def read_deny_map(path: str) -> dict:
+    """Entries of a list we wrote earlier, including ones written by another run."""
+    entries: dict[str, dict] = {}
+    if not path or not os.path.exists(path):
+        return entries
+    lines = open(path, encoding="utf-8").read().splitlines()
+    for index, line in enumerate(lines):
+        match = DENY_ENTRY.match(line)
+        if not match or index + 1 >= len(lines):
+            continue
+        if lines[index + 1].strip() != "deny %s;" % match.group("ip"):
+            continue
+        entries[match.group("ip")] = {
+            "ip": match.group("ip"), "level": match.group("level"),
+            "points": int(match.group("points")),
+            "expires": int(match.group("expires")),
+            "rules": [r for r in match.group("rules").split(",") if r],
+            "reason": match.group("reason"),
+        }
+    return entries
+
+
 def deny_list(result: dict, min_level: str = "medium", now: float | None = None,
               ttl_s: int = 3600, ignore: set[str] | None = None,
-              allow_volume: bool = False) -> dict:
+              allow_volume: bool = False, previous: dict | None = None,
+              cap: int = 1000) -> dict:
     """Turn findings into an edge block list (nginx `deny` lines + JSON entries).
 
     The list is meant to be rewritten on a timer: every entry carries the epoch
@@ -423,15 +454,56 @@ def deny_list(result: dict, min_level: str = "medium", now: float | None = None,
                         "reason": why, "expires": int(moment + ttl_s),
                         "rules": sorted({f["rule"] for f in session["findings"]
                                          if not f.get("suppressed")})})
+    # keep what an earlier run blocked and has not expired: a quiet minute must
+    # not lift a block that is still meant to stand
+    merged = {ip: item for ip, item in (previous or {}).items()
+              if float(item.get("expires") or 0) > moment}
+    order_levels = {"low": 0, "medium": 1, "high": 2, "critical": 3}
+    for entry in entries:
+        old = merged.get(entry["ip"])
+        if old is None or order_levels.get(entry["level"], 0) >= order_levels.get(
+                old.get("level"), 0):
+            merged[entry["ip"]] = entry
+    if len(merged) > cap:
+        return {"entries": [], "count": 0, "skipped": skipped,
+                "previous": len(previous or {}),
+                "nginx": "# refused: %d entries exceed cap %d\n" % (len(merged), cap),
+                "json": {"error": "cap_exceeded", "entries": len(merged), "cap": cap},
+                "error": "deny cap exceeded (%d > %d); nothing written"
+                         % (len(merged), cap)}
     lines = ["# tripwire deny list, generated %s, ttl %ds"
              % (time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(moment)), ttl_s)]
-    for entry in entries:
+    for entry in merged.values():
         lines.append("# %s %s points=%d expires=%d rules=%s reason=%s"
                      % (entry["ip"], entry["level"], entry["points"], entry["expires"],
-                        ",".join(entry["rules"]), entry["reason"]))
+                        ",".join(entry["rules"]), entry.get("reason", "")))
         lines.append("deny %s;" % entry["ip"])
     for item in skipped:
         lines.append("# skipped %s (%s)" % (item["ip"], item["why"]))
-    return {"entries": entries, "count": len(entries), "skipped": skipped,
+    return {"entries": list(merged.values()), "count": len(merged), "skipped": skipped,
             "nginx": "\n".join(lines) + "\n",
-            "json": {"generated": int(moment), "ttl_s": ttl_s, "deny": entries}}
+            "json": {"generated": int(moment), "ttl_s": ttl_s,
+                     "deny": list(merged.values())}}
+
+
+def write_deny_files(result: dict, map_path: str | None, json_path: str | None,
+                     **kwargs) -> dict:
+    """Merge with whatever is on disk, then replace it atomically."""
+    previous = read_deny_map(map_path or "") if map_path else {}
+    out = deny_list(result, previous=previous, **kwargs)
+    if out.get("error"):
+        return out
+    for path, payload in ((map_path, out["nginx"]), (json_path, None)):
+        if not path:
+            continue
+        directory = os.path.dirname(os.path.abspath(path))
+        if directory:
+            os.makedirs(directory, exist_ok=True)
+        handle, tmp = tempfile.mkstemp(dir=directory or ".", prefix=".deny-")
+        with os.fdopen(handle, "w", encoding="utf-8") as fh:
+            if payload is None:
+                json.dump(out["json"], fh, indent=1, sort_keys=True)
+            else:
+                fh.write(payload)
+        os.replace(tmp, path)
+    return out

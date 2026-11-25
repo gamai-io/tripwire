@@ -90,8 +90,12 @@ tripwire watch --log access.jsonl --trusted-proxy 10.0.0.0/8 --trusted-proxy 104
 that address blocked.
 
 **Deny list.** `--deny-map` writes `deny <ip>;` lines with a comment per entry
-carrying `expires=<epoch>`; `--deny-json` writes the same as data. Three gates
-before an address is blocked:
+carrying `expires=<epoch>`; `--deny-json` writes the same as data. It **merges
+with the file already on disk** (an unexpired block survives a quiet minute),
+drops expired entries, replaces the file atomically, refuses to grow past
+`--deny-max` (default 1000 — a huge list costs nginx throughput), and runs
+`--reload-cmd` only after a good write. Apply the list from your edge; the tool
+never rewrites firewall state itself. Three gates before an address is blocked:
 
 1. **Global unicast only** — loopback, RFC1918, link-local and documentation
    ranges are skipped and reported: blocking them takes the service down.
@@ -165,12 +169,26 @@ python3 tools/measure.py --corpus corpus
 | 60 attack sessions (incident replay, key prober, slow scanner, docs crawler) | **45 high**, **60 medium or higher** |
 | **held-out corpus**, different seed (771122), same 300/60 split | **0 flagged**, **45 high**, **60 medium+** — identical to the tuning seed |
 | this server's nginx log: 4,048 requests, 238 sources | 5 flagged ≥ medium, **0 proven false positives**, 3 confirmed WordPress probing + a 770-path scanner that answers only 301 |
-| 100,000 requests from one address on one path | **1.19 s** with gama-mandate 0.44+ (2.89 s at 20,000 before: the window scan was quadratic) |
+| 100,000 requests from one address on one path, one key | **1.20 s** with gama-mandate 0.44+ (658 s before the fix, and zero findings) |
 
 Method, per-family tables and the four changes the measurement forced (including
 `tool_switch` dropping from 3 to 2 because it flagged 50 of 300 benign sessions)
 are in [`docs/FALSE_POSITIVES.md`](docs/FALSE_POSITIVES.md). Re-running the two
 commands reproduces every number.
+
+## Run it every minute
+
+```bash
+cp packaging/tripwire-watch.* /etc/systemd/system/
+systemctl enable --now tripwire-watch.timer
+```
+
+The window is the memory, so a timer gives tail-like coverage without a daemon.
+Exit codes are part of the contract: `0` clean, `1` findings, `3` **could not
+analyse** (missing or unparsable log), `4` **refused** (unreadable canary
+registry, deny cap hit). Deployment shape, ledger rotation, measured throughput
+and what is deliberately missing are in
+[`docs/OPERATIONS.md`](docs/OPERATIONS.md).
 
 ## Tests
 
@@ -178,7 +196,7 @@ commands reproduces every number.
 python -m pytest -q tests/
 ```
 
-60 tests: the reported timeline scores **high** with all four decisive rules; a
+69 tests: the reported timeline scores **high** with all four decisive rules; a
 canary in the same log is **critical**; a developer switching to `curl` stays
 **low**; a doc reader without a failed check is suppressed; one document unlocks
 one path; a redirect-heavy scan is caught without any 4xx; a search bot is not a
