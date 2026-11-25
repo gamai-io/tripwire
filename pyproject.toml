@@ -12,7 +12,7 @@ license = "MIT"
 license-files = ["LICENSE"]
 authors = [{name = "Renato Šuster", email = "renato@gamatrade.ba"}]
 keywords = ["ai-agents", "security", "detection", "canary", "honeytoken", "access-log"]
-dependencies = ["gama-mandate>=0.44"]
+dependencies = ["gama-mandate>=0.43"]
 classifiers = [
   "Programming Language :: Python :: 3",
   "Operating System :: OS Independent",

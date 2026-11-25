@@ -29,7 +29,7 @@ what an inbound detector needs and an authorisation log cannot give:
 ## Install
 
 ```bash
-pip install gamai-tripwire      # pulls gama-mandate >= 0.44 for the base rules + ledger
+pip install gamai-tripwire      # pulls gama-mandate >= 0.43 for the base rules + ledger
 ```
 
 Python 3.9+, no services, no model, no network calls at analysis time.
@@ -165,7 +165,7 @@ python3 tools/measure.py --corpus corpus
 | 60 attack sessions (incident replay, key prober, slow scanner, docs crawler) | **45 high**, **60 medium or higher** |
 | **held-out corpus**, different seed (771122), same 300/60 split | **0 flagged**, **45 high**, **60 medium+** — identical to the tuning seed |
 | this server's nginx log: 4,048 requests, 238 sources | 5 flagged ≥ medium, **0 proven false positives**, 3 confirmed WordPress probing + a 770-path scanner that answers only 301 |
-| 100,000 requests from one address on one path | **1.19 s** (was 2.89 s at 20,000 before the fix: the window scan was quadratic) |
+| 100,000 requests from one address on one path | **1.19 s** with gama-mandate 0.44+ (2.89 s at 20,000 before: the window scan was quadratic) |
 
 Method, per-family tables and the four changes the measurement forced (including
 `tool_switch` dropping from 3 to 2 because it flagged 50 of 300 benign sessions)

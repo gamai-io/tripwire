@@ -12,7 +12,8 @@
   the 770-request all-301 scanner on this server's log that scored 1 point.
 - Deny gate: volume rules alert but never deny (CDN/NAT); `--deny-unsafe` opts in.
 - `tools/bench.py` and a held-out corpus (seed 771122) with identical numbers.
-- Depends on `gama-mandate >= 0.44` for the linear base rules.
+- Depends on `gama-mandate >= 0.43`; 0.44+ contains the linear window scan and is
+  recommended (a hard >=0.44 pin made CI fail for ~15 minutes on PyPI CDN lag).
 - 60 tests.
 
 ## 0.2.0 — 2026-11-25
