@@ -66,6 +66,17 @@ class Incident(unittest.TestCase):
             self.assertEqual(len(res["canary_hits"]), 1)
             self.assertIn("canary_used", {f["rule"] for f in session["findings"]})
 
+    def test_a_url_encoded_canary_is_still_matched(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            path = os.path.join(td, "canaries.json")
+            token = canary.generate(1, path=path)["tokens"][0]
+            encoded = token.replace("_", "%5F")
+            rows = [row(NOW - 30, CURL, "/api/v1/accounts", 401,
+                        auth="Bearer " + encoded)]
+            res = detect.analyse(rows, canary.load(path), now=NOW)
+            self.assertEqual(len(res["canary_hits"]), 1)
+            self.assertEqual(res["sessions"][IP]["level"], "critical")
+
     def test_a_benign_visitor_stays_low(self) -> None:
         rows = [row(NOW - 300 + i * 20, DESKTOP, "/pricing") for i in range(5)]
         self.assertEqual(detect.analyse(rows, now=NOW)["sessions"][IP]["level"], "low")

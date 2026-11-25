@@ -86,7 +86,8 @@ Levels: `critical` (canary), `high` (>=6), `medium` (>=3), else `low`.
 Android UA 6 s later, API document, path from that document 13 s later, three
 auth values within 4 s, submit-only endpoint read twice — and asserts **high**
 plus the four decisive rules; a canary in the same log makes it **critical**; a
-five-page visitor stays **low**; a quiet log writes nothing to the ledger.
+five-page visitor stays **low**; a quiet log writes nothing to the ledger. A
+percent-encoded canary in a query string is decoded before matching.
 
 ```bash
 python -m pytest -q tests/

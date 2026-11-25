@@ -18,6 +18,7 @@ Levels: any canary hit is `critical`; otherwise the mandate score applies
 from __future__ import annotations
 
 import time
+import urllib.parse
 from collections import defaultdict
 
 from mandate import agentwatch
@@ -74,6 +75,7 @@ def analyse(rows: list[dict], registry: dict | None = None, window: int = 600,
     for row in rows:
         text = " ".join(str(row.get(k) or "") for k in
                         ("path", "ua", "referer", "query", "body", "auth"))
+        text = urllib.parse.unquote(text)      # query strings arrive percent-encoded
         for hit in canary_mod.match(text, registry or {}):
             canary_hits.append({"ip": row.get("ip"), "ts": row.get("ts"),
                                 "path": row.get("path"), "canary": hit.get("id")})

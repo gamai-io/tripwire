@@ -40,15 +40,16 @@ jobs:
 
   publish:
     needs: build
-    # a tag builds and verifies; publishing is an explicit, auditable dispatch
-    if: github.event_name == 'workflow_dispatch' && inputs.publish == true
+    # a tag publishes after the build job passed; dispatch can also publish
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish == true)
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write
     steps:
       - uses: actions/download-artifact@v4
         with:
           name: dist
           path: dist
       - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
