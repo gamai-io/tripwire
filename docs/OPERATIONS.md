@@ -76,6 +76,12 @@ findings (the old `key_probing` rescanned the window per row). The ops review
 measured 0.2.0 at 1M lines: 89.7 s and 1.47 GB, with 62–80% of the time in that
 one rule.
 
+**Streaming.** With a window smaller than the file (`--stream`), memory is bounded
+by the rows inside the window: on 500k lines from 200 addresses, window 600 s, the
+run peaked at **34 MB and 3.6 s** instead of **492 MB and 11.9 s**. Use it when the
+file spans more than the window; with `--window` covering the whole file there is
+nothing to trim and the two modes converge.
+
 **Sizing.** Roughly 1–1.5 KB of RAM per row, 12k lines/s best case. A bank branch
 average of 579 lines/s is fine for a one-minute cadence; a 50M-lines/day firehose
 is not — that needs a streaming aggregate, which is not built. Say so in the
@@ -88,4 +94,6 @@ proposal rather than discovering it in the pilot.
 - **No per-path baseline.** Thresholds are global; a busy endpoint looks like a
   scanner. Next piece of work.
 - **No multi-tenant separation.** One process, one log, one ledger.
-- **No streaming aggregation** for 50M lines/day.
+- **Streaming is chunked, not incremental.** It bounds memory by the window, but a
+  rule that needs two events in different chunks can be missed; the window is the
+  unit of correctness.

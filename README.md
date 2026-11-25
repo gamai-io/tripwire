@@ -190,6 +190,25 @@ Method, per-family tables and the four changes the measurement forced (including
 are in [`docs/FALSE_POSITIVES.md`](docs/FALSE_POSITIVES.md). Re-running the two
 commands reproduces every number.
 
+## Files bigger than memory
+
+`--stream` keeps only the window instead of the whole file. Same verdicts, a
+fraction of the RAM; measured on 500,000 lines from 200 addresses:
+
+| mode | window | peak RSS | time |
+|---|---|---|---|
+| batch (default) | 600 s | **492 MB** | 11.9 s |
+| `--stream --chunk 200000` | 600 s | **34 MB** | 3.6 s |
+
+```bash
+tripwire watch --log access.log --stream --window 600 --chunk 200000
+```
+
+`--chunk` rows are scored together and the findings are unioned per source, with
+points taking the maximum. A chunk boundary can lose a timing correlation between
+two rules; it cannot invent one. `rows_in_window` in the output tells you what the
+window actually held.
+
 ## Run it every minute
 
 ```bash
@@ -210,7 +229,7 @@ and what is deliberately missing are in
 python -m pytest -q tests/
 ```
 
-85 tests: the reported timeline scores **high** with all four decisive rules; a
+90 tests: the reported timeline scores **high** with all four decisive rules; a
 canary in the same log is **critical**; a developer switching to `curl` stays
 **low**; a doc reader without a failed check is suppressed; one document unlocks
 one path; a redirect-heavy scan is caught without any 4xx; a search bot is not a

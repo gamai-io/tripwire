@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.7.0 — 2026-11-25
+- `--stream` / `--chunk`: score a file too large to hold. Only the window stays in
+  memory; chunks are scored and findings unioned per source with points taking the
+  maximum. Measured on 500,000 lines, window 600 s: **34 MB / 3.6 s** versus
+  **492 MB / 11.9 s** in batch mode.
+- `logread.iter_rows` and `count_lines` so nothing needs to materialise the file.
+- `rows_in_window` in the output, so the operator can see what the window held.
+- Stated limit: chunk boundaries can lose a cross-chunk correlation; the window is
+  the unit of correctness.
+- 5 new tests; 90 total.
+
 ## 0.6.0 — 2026-11-25
 - `--baseline FILE`: per-path history (EWMA of requests and distinct sources) with
   path templating, so a scan spread across many addresses is visible at the

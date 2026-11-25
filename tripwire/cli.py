@@ -43,6 +43,10 @@ def main(argv=None) -> int:
     p_watch.add_argument("--deny-ttl", dest="deny_ttl", type=int, default=3600)
     p_watch.add_argument("--now", default="file",
                          help="'file' (default: newest row), 'wall', or an epoch")
+    p_watch.add_argument("--stream", action="store_true",
+                         help="score a file too large for memory: keep only the window")
+    p_watch.add_argument("--chunk", type=int, default=200000,
+                         help="rows per scoring pass in --stream mode")
     p_watch.add_argument("--baseline", default=None,
                          help="JSON file with per-path history; enables distributed-scan "
                               "detection and is updated after a clean run")
@@ -111,13 +115,17 @@ def main(argv=None) -> int:
             except ValueError:
                 _emit({"error": "Usage", "message": "--now takes 'file', 'wall' or an epoch"})
                 return 2
+        common = dict(window=a.window, ledger=a.ledger, fmt=a.format, now=now,
+                      trusted=a.trusted_proxy,
+                      baseline_path=a.baseline or "",
+                      baseline_factor=a.baseline_factor,
+                      baseline_floor=a.baseline_floor,
+                      baseline_update=a.baseline_update)
         try:
-            res = detect.watch(a.log, registry, a.window, a.ledger, a.format, now=now,
-                               trusted=a.trusted_proxy,
-                               baseline_path=a.baseline or "",
-                               baseline_factor=a.baseline_factor,
-                               baseline_floor=a.baseline_floor,
-                               baseline_update=a.baseline_update)
+            if a.stream:
+                res = detect.watch_stream(a.log, registry, chunk=a.chunk, **common)
+            else:
+                res = detect.watch(a.log, registry, **common)
         except OSError as exc:
             _emit({"error": "Unreadable", "message": str(exc)})
             return 3

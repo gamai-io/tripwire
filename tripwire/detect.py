@@ -280,6 +280,106 @@ def analyse(rows: list[dict], registry: dict | None = None, window: int = 600,
             "sessions": base["sessions"]}
 
 
+def _merge_session(into: dict, session: dict) -> None:
+    """Union findings by rule, keep the highest points. Used by chunked scoring."""
+    known = {f["rule"]: f for f in into["findings"]}
+    for finding in session.get("findings") or []:
+        previous = known.get(finding["rule"])
+        if previous is None or finding["points"] > previous["points"]:
+            known[finding["rule"]] = finding
+    into["points"] = max(into["points"], session["points"])
+    into["findings"] = list(known.values())
+    into["requests"] += session.get("requests", 0)
+    into["first_ts"] = min(filter(None, [into.get("first_ts"),
+                                         session.get("first_ts")]), default=None)
+    into["last_ts"] = max(filter(None, [into.get("last_ts"),
+                                        session.get("last_ts")]), default=None)
+    into["level"] = _level(into["points"], into["level"] == "critical"
+                           or session["level"] == "critical")
+
+
+def watch_stream(log_path: str, registry: dict | None = None, window: int = 600,
+                 ledger: str | None = None, fmt: str = "auto",
+                 now: float | None = None, trusted: list | None = None,
+                 chunk: int = 200_000, baseline_path: str = "",
+                 baseline_factor: float = 3.0, baseline_floor: int = 10,
+                 baseline_update: bool = True) -> dict:
+    """Score a file too large to hold: keep only the window, merge per chunk.
+
+    Memory is bounded by (lines inside the window), not by the file. Findings are
+    unioned per source and points take the maximum, so a chunk boundary can lose a
+    timing correlation between two rules but never invents one.
+    """
+    from collections import deque
+    kept: deque = deque()
+    merged: dict[str, dict] = {}
+    canary_hits: list[dict] = []
+    anomalies: dict[str, dict] = {}
+    total = skipped = 0
+    latest = 0.0
+    since_analysis = 0
+    rows_seen: list[dict] = []
+
+    def analyse_window(final: bool = False) -> None:
+        rows = list(kept)
+        if not rows:
+            return
+        result = analyse(rows, registry, window, now=latest + 1)
+        for ip, session in result["sessions"].items():
+            target = merged.setdefault(ip, {"points": 0, "level": "low", "findings": [],
+                                            "requests": 0, "first_ts": None,
+                                            "last_ts": None})
+            _merge_session(target, session)
+        canary_hits.extend(result["canary_hits"])
+        for item in result.get("path_anomalies") or []:
+            anomalies[item["path"]] = item
+        if final:
+            rows_seen.extend(rows)
+
+    for row in logread.iter_rows(log_path, fmt, trusted):
+        total += 1
+        ts = float(row.get("ts") or 0)
+        latest = max(latest, ts)
+        kept.append(row)
+        since_analysis += 1
+        cutoff = latest - window
+        while kept and float(kept[0].get("ts") or 0) < cutoff:
+            kept.popleft()
+        if since_analysis >= chunk:
+            analyse_window()
+            since_analysis = 0
+        if len(kept) > chunk * 2:          # a burst: keep memory bounded, note it
+            skipped += len(kept) - chunk
+            while len(kept) > chunk:
+                kept.popleft()
+    analyse_window(final=True)
+    rows = rows_seen if baseline_path else []
+    result = {"window_s": window, "sources": len(merged), "rows": total,
+              "skipped_lines": skipped, "empty": total == 0,
+              "stream": True, "chunk": chunk,
+              "rows_in_window": len(kept),
+              "canary_hits": canary_hits,
+              "auth_failure_streaks": [],
+              "spec_derived_paths": [],
+              "path_anomalies": [],
+              "flagged": sum(1 for s in merged.values() if s["level"] != "low"),
+              "sessions": merged,
+              "evidence": {ip: {"requests": s.get("requests", 0), "failures": 0,
+                                "user_agents": 0} for ip, s in merged.items()},
+              "now": latest}
+    if baseline_path:
+        _apply_baseline(result, rows, baseline_path, baseline_factor, baseline_floor,
+                        baseline_update)
+    if ledger:
+        alerts = {ip: s for ip, s in merged.items() if s["level"] != "low"}
+        if alerts:
+            append_receipt(ledger, {"v": 1, "type": "control", "action": "alert",
+                                    "actor": "tripwire", "ts": time.time(),
+                                    "log": log_path, "stream": True,
+                                    "canary_hits": canary_hits, "findings": alerts})
+    return result
+
+
 def watch_rows(rows: list[dict], registry: dict | None = None, window: int = 600,
                now: float | None = None, baseline_path: str = "",
                baseline_factor: float = 3.0, baseline_floor: int = 10,

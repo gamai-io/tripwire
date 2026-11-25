@@ -174,3 +174,45 @@ def load_stats(path: str, fmt: str = "auto",
 
 def load(path: str, fmt: str = "auto", trusted: list | None = None) -> list[dict]:
     return load_stats(path, fmt, trusted)[0]
+
+
+def iter_rows(path: str, fmt: str = "auto", trusted: list | None = None):
+    """Yield rows one at a time, so a 50M-line file never lands in memory at once."""
+    fmt = guess_format(path) if fmt in ("", "auto") else fmt
+    with _open(path) as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            if fmt == "combined":
+                row = parse_combined(line)
+            else:
+                try:
+                    row = json.loads(line)
+                except ValueError:
+                    continue
+                if not isinstance(row, dict):
+                    continue
+                if not row.get("ua_platform") and row.get("ua"):
+                    row["ua_platform"] = _platform(str(row["ua"]))
+            if row:
+                yield resolve_client(row, trusted)
+
+
+def count_lines(path: str) -> tuple[int, int]:
+    """Total lines and unparsable lines, without keeping anything."""
+    total = good = 0
+    fmt = guess_format(path)
+    with _open(path) as fh:
+        for line in fh:
+            if not line.strip():
+                continue
+            total += 1
+            if fmt == "combined":
+                good += 1 if parse_combined(line) else 0
+            else:
+                try:
+                    good += 1 if isinstance(json.loads(line), dict) else 0
+                except ValueError:
+                    pass
+    return total, total - good
