@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-import random
 import resource
 import sys
 import tempfile
@@ -18,7 +17,6 @@ UA = "curl/8.7.1"
 
 
 def write_log(path, n, ips=50, paths=200):
-    rng = random.Random(7)
     base = 1_795_000_000.0
     with open(path, "w") as fh:
         for i in range(n):
