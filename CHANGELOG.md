@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.0 — 2026-11-25
+- `--state` / `--state-ttl`: a cron no longer repeats the same alert every
+  minute; escalation is new again, the file is pruned and replaced atomically.
+- `X-Forwarded-For` is trusted only from `--trusted-proxy` (CIDR, repeatable);
+  a header from an unlisted peer is ignored and recorded as `xff_ignored`.
+- `.gz` logs are read directly (rotation needs no unpacking step).
+- Quadratic window scans removed: `auth_failure_streak` and `path_burst` use a
+  sliding counter; 100k requests from one address now cost 1.19 s.
+- `path_burst` (40 paths/min, status-independent, search bots excluded) catches
+  the 770-request all-301 scanner on this server's log that scored 1 point.
+- Deny gate: volume rules alert but never deny (CDN/NAT); `--deny-unsafe` opts in.
+- `tools/bench.py` and a held-out corpus (seed 771122) with identical numbers.
+- Depends on `gama-mandate >= 0.44` for the linear base rules.
+- 60 tests.
+
 ## 0.2.0 — 2026-11-25
 - Measured false positives: 300 benign sessions -> 0 flagged at any level; 60
   attacks -> 45 high, 60 >= medium. `docs/FALSE_POSITIVES.md` carries the method.

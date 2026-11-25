@@ -29,7 +29,7 @@ what an inbound detector needs and an authorisation log cannot give:
 ## Install
 
 ```bash
-pip install gamai-tripwire      # pulls gama-mandate for the base rules + ledger
+pip install gamai-tripwire      # pulls gama-mandate >= 0.44 for the base rules + ledger
 ```
 
 Python 3.9+, no services, no model, no network calls at analysis time.
@@ -104,6 +104,20 @@ before an address is blocked:
 
 `--ignore <ip>` (repeatable) keeps your own scanner out.
 
+**Not shouting every minute.** A cron that re-runs `watch` over the same file
+needs `--state`:
+
+```bash
+tripwire watch --log access.jsonl --state /var/lib/tripwire/state.json --state-ttl 3600
+# output: new_alerts=0 when nothing changed; an escalation is new again
+```
+
+The state file keeps the last level per address with an expiry, is pruned on
+every write and is replaced atomically.
+
+**Rotation.** `.gz` files are read directly, so `access.log.1.gz` needs no
+unpacking step.
+
 **Time.** The window is measured against the **newest row in the file**, not the
 wall clock, so a log written yesterday is still analysed. `--now wall` for live
 tailing, `--now <epoch>` for a fixed cut-off. An empty or unparsable file exits
@@ -149,7 +163,9 @@ python3 tools/measure.py --corpus corpus
 |---|---|
 | 300 benign sessions (readers, doc readers, developers on `curl`, crawlers, API clients, monitoring) | **0 flagged**, at any level |
 | 60 attack sessions (incident replay, key prober, slow scanner, docs crawler) | **45 high**, **60 medium or higher** |
+| **held-out corpus**, different seed (771122), same 300/60 split | **0 flagged**, **45 high**, **60 medium+** — identical to the tuning seed |
 | this server's nginx log: 4,048 requests, 238 sources | 5 flagged ≥ medium, **0 proven false positives**, 3 confirmed WordPress probing + a 770-path scanner that answers only 301 |
+| 100,000 requests from one address on one path | **1.19 s** (was 2.89 s at 20,000 before the fix: the window scan was quadratic) |
 
 Method, per-family tables and the four changes the measurement forced (including
 `tool_switch` dropping from 3 to 2 because it flagged 50 of 300 benign sessions)
@@ -162,7 +178,7 @@ commands reproduces every number.
 python -m pytest -q tests/
 ```
 
-51 tests: the reported timeline scores **high** with all four decisive rules; a
+60 tests: the reported timeline scores **high** with all four decisive rules; a
 canary in the same log is **critical**; a developer switching to `curl` stays
 **low**; a doc reader without a failed check is suppressed; one document unlocks
 one path; a redirect-heavy scan is caught without any 4xx; a search bot is not a

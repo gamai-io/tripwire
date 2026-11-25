@@ -25,6 +25,9 @@ A judge model may explain a finding, never lower it.
 from __future__ import annotations
 
 import ipaddress
+import json
+import os
+import tempfile
 import time
 import urllib.parse
 from collections import defaultdict
@@ -95,12 +98,17 @@ def auth_failure_streak(rows: list[dict], count: int = 5, within: float = 60.0) 
     out = []
     for (ip, path), stamps in by_key.items():
         stamps.sort()
-        for i, start in enumerate(stamps):
-            window = [t for t in stamps[i:] if t - start <= within]
-            if len(window) >= count:
-                out.append({"ip": ip, "path": path, "attempts": len(window),
-                            "seconds": round(window[-1] - window[0], 1)})
-                break
+        left = 0
+        best = (0, 0.0)
+        for right, stamp in enumerate(stamps):
+            while stamp - stamps[left] > within:
+                left += 1
+            window = right - left + 1
+            if window > best[0]:
+                best = (window, round(stamp - stamps[left], 1))
+        if best[0] >= count:
+            out.append({"ip": ip, "path": path, "attempts": best[0],
+                        "seconds": best[1]})
     return out
 
 
@@ -294,17 +302,19 @@ def path_burst(rows: list[dict], threshold: int = 40, within: float = 60.0) -> l
     out = []
     for ip, items in by_ip.items():
         items.sort()
-        seen: set[str] = set()
-        window: list[float] = []
+        counts: dict[str, int] = {}
+        left = 0
         for ts, path in items:
-            window = [t for t in window if ts - t <= within]
-            window.append(ts)
-            if path not in seen:
-                seen.add(path)
-                distinct = len({p for t, p in items if t in window})
-                if distinct >= threshold:
-                    out.append({"ip": ip, "paths": distinct, "seconds": int(within)})
-                    break
+            counts[path] = counts.get(path, 0) + 1
+            while ts - items[left][0] > within:
+                old = items[left][1]
+                counts[old] -= 1
+                if not counts[old]:
+                    del counts[old]
+                left += 1
+            if len(counts) >= threshold:
+                out.append({"ip": ip, "paths": len(counts), "seconds": int(within)})
+                break
     return out
 
 
@@ -333,6 +343,54 @@ def deny_evidence(session: dict, evidence: dict | None) -> tuple[bool, str]:
     if behaviours and failures >= 5:
         return True, "behaviour + %d failed requests" % failures
     return False, "volume evidence only (%s)" % (",".join(sorted(rules)) or "none")
+
+
+def apply_state(result: dict, state_path: str, ttl_s: int = 3600,
+                now: float | None = None) -> dict:
+    """Return only what is new or worse since the last run, and remember it.
+
+    A cron that re-runs every minute would otherwise re-alert on the same address
+    until the window rolls over. State is a small JSON file; it is pruned on every
+    write, so it cannot grow without bound.
+    """
+    moment = time.time() if now is None else now
+    state = {"version": 1, "alerts": {}}
+    if os.path.exists(state_path):
+        try:
+            state = json.load(open(state_path, encoding="utf-8"))
+        except ValueError:
+            state = {"version": 1, "alerts": {}}
+    alerts = state.setdefault("alerts", {})
+    order = {"low": 0, "medium": 1, "high": 2, "critical": 3}
+    new = 0
+    for ip, session in result["sessions"].items():
+        if session["level"] == "low":
+            continue
+        previous = alerts.get(ip)
+        expired = not previous or float(previous.get("expires") or 0) <= moment
+        worse = previous and order.get(session["level"], 0) > order.get(
+            previous.get("level"), 0)
+        if expired or worse:
+            new += 1
+            session["is_new"] = True
+        else:
+            session["is_new"] = False
+            session["repeat"] = True
+        alerts[ip] = {"level": session["level"], "points": session["points"],
+                      "first_seen": (previous or {}).get("first_seen", int(moment)),
+                      "expires": int(moment + ttl_s)}
+    alerts = {ip: item for ip, item in alerts.items()
+              if float(item.get("expires") or 0) > moment}
+    state["alerts"] = alerts
+    directory = os.path.dirname(os.path.abspath(state_path))
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+    handle, tmp = tempfile.mkstemp(dir=directory or ".", prefix=".state-")
+    with os.fdopen(handle, "w", encoding="utf-8") as fh:
+        json.dump(state, fh, indent=1, sort_keys=True)
+    os.replace(tmp, state_path)
+    result["new_alerts"] = new
+    return result
 
 
 def deny_list(result: dict, min_level: str = "medium", now: float | None = None,

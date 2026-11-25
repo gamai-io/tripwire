@@ -45,6 +45,21 @@ that contains the whole session, so the result does not depend on when it runs.
 Per family, attacks: `incident` 15/15 high, `key_prober` 15/15 high,
 `docs_crawler` 15/15 high, `slow_scanner` 15/15 medium.
 
+### Held-out sample
+
+The tuning decisions above were made on seed `20261125`. The same code was then
+run on a fresh sample, seed `771122`, 300 benign and 60 attack sessions:
+
+| metric | tuning seed | held-out seed |
+|---|---|---|
+| benign flagged (any level) | 0 / 300 | **0 / 300** |
+| attacks high | 45 / 60 | **45 / 60** |
+| attacks medium or higher | 60 / 60 | **60 / 60** |
+
+Identical, which is what one hopes for and not the same thing as proof: both
+samples come from the same generator, so this rules out seed luck, not model
+error.
+
 ## 2. This server's own nginx log
 
 ```bash
@@ -125,6 +140,9 @@ per-entry expiry. Before writing, each address is checked with
 - `slow_scanner` lands on medium. Raising it to high would require calling every
   slow 404 walk an incident; the deny threshold defaults to medium instead.
 - Thresholds are global, not per-API. Per-path baselines are future work.
+- The corpus is a model of traffic written by the same person who wrote the
+  detector. A held-out seed shows the numbers are not seed luck; it says nothing
+  about a real bank's API. That needs a design partner's log, with labels.
 - Behind a CDN every request looks like it comes from the CDN. `--trusted-proxy`
   fixes the address only when the proxy is pinned; a log that never recorded
   `X-Forwarded-For` cannot be repaired afterwards.

@@ -41,6 +41,9 @@ def main(argv=None) -> int:
     p_watch.add_argument("--deny-ttl", dest="deny_ttl", type=int, default=3600)
     p_watch.add_argument("--now", default="file",
                          help="'file' (default: newest row), 'wall', or an epoch")
+    p_watch.add_argument("--state", default=None,
+                         help="JSON file remembering alerts, so a cron does not repeat them")
+    p_watch.add_argument("--state-ttl", dest="state_ttl", type=int, default=3600)
     p_watch.add_argument("--deny-unsafe", dest="deny_unsafe", action="store_true",
                          help="also deny on volume evidence alone (CDN/NAT risk)")
     p_watch.add_argument("--trusted-proxy", dest="trusted_proxy", action="append",
@@ -93,6 +96,8 @@ def main(argv=None) -> int:
         floor = order[a.min_level]
         flagged = {ip: s for ip, s in res["sessions"].items()
                    if order.get(s["level"], 0) >= floor}
+        if a.state:
+            res = detect.apply_state(res, a.state, a.state_ttl)
         deny = detect.deny_list(res, a.min_level, ttl_s=a.deny_ttl,
                                 ignore=set(a.ignore or ()),
                                 allow_volume=a.deny_unsafe)
@@ -112,6 +117,7 @@ def main(argv=None) -> int:
                "canary_hits": len(res["canary_hits"]),
                "spec_derived_paths": len(res["spec_derived_paths"]),
                "deny_entries": deny["count"],
+               "new_alerts": res.get("new_alerts", len(flagged)),
                "deny_skipped": len(deny["skipped"]),
                "sessions": flagged})
         return 0 if not flagged else 1

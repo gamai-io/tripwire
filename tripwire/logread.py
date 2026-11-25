@@ -8,6 +8,7 @@ value, which is what the key-probing rule needs).
 from __future__ import annotations
 
 import calendar
+import gzip
 import ipaddress
 import json
 import re
@@ -76,7 +77,7 @@ def parse_combined(line: str) -> dict | None:
 
 
 def guess_format(path: str) -> str:
-    with open(path, encoding="utf-8", errors="replace") as fh:
+    with _open(path) as fh:
         for _ in range(20):
             line = fh.readline()
             if not line.strip():
@@ -136,10 +137,16 @@ def resolve_client(row: dict, trusted: list | None = None) -> dict:
     return row
 
 
+def _open(path: str):
+    if path.endswith(".gz"):
+        return gzip.open(path, "rt", encoding="utf-8", errors="replace")
+    return open(path, encoding="utf-8", errors="replace")
+
+
 def load(path: str, fmt: str = "auto", trusted: list | None = None) -> list[dict]:
     fmt = guess_format(path) if fmt in ("", "auto") else fmt
     rows: list[dict] = []
-    with open(path, encoding="utf-8", errors="replace") as fh:
+    with _open(path) as fh:
         for line in fh:
             line = line.strip()
             if not line:

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gamai-tripwire"
-version = "0.2.0"
+version = "0.3.0"
 description = "Detect an inbound AI agent by behaviour, not blocklists: planted canaries, spec-derived novel paths, tool switching, key probing."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -12,7 +12,7 @@ license = "MIT"
 license-files = ["LICENSE"]
 authors = [{name = "Renato Šuster", email = "renato@gamatrade.ba"}]
 keywords = ["ai-agents", "security", "detection", "canary", "honeytoken", "access-log"]
-dependencies = ["gama-mandate>=0.42"]
+dependencies = ["gama-mandate>=0.44"]
 classifiers = [
   "Programming Language :: Python :: 3",
   "Operating System :: OS Independent",
