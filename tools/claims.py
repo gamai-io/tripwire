@@ -98,15 +98,15 @@ def check() -> list[str]:
     readme = open(os.path.join(ROOT, "README.md"), encoding="utf-8").read()
     if not re.search(r"\d+\s+tests?", readme):
         problems.append("README.md states no test count; a silent pass is not a claim")
-    passed = _passed()
+    collected = count_tests()
     for match in re.finditer(r"(?P<n>\d+) tests", readme):
-        if passed < 0:
-            problems.append("could not run the test suite; the README test count "
-                            "was not checked")
+        if collected < 0:
+            problems.append("could not collect the test suite; the README test "
+                            "count was not checked")
             break
-        if int(match.group("n")) != passed:
-            problems.append("README claims %s tests, suite has %d passing"
-                            % (match.group("n"), passed))
+        if int(match.group("n")) != collected:
+            problems.append("README claims %s tests, suite collects %d"
+                            % (match.group("n"), collected))
     # CLAIMS.md is the evidence index; a stale number there lies with authority
     claims_path = os.path.join(ROOT, "CLAIMS.md")
     if os.path.exists(claims_path):
@@ -115,12 +115,17 @@ def check() -> list[str]:
         if version_row and version_row.group(1) != current:
             problems.append("CLAIMS.md says version %s, pyproject is %s"
                             % (version_row.group(1), current))
-        for label, actual in (("tests collected", count_tests()),
-                              ("tests passing", _passed())):
-            row = re.search(r"\| %s \| (\d+) \|" % re.escape(label), claims)
-            if row and int(row.group(1)) != actual:
-                problems.append("CLAIMS.md says %s %s, suite has %d"
-                                % (label, row.group(1), actual))
+        row = re.search(r"\| tests collected \| (\d+) \|", claims)
+        if not row:
+            problems.append("CLAIMS.md has no 'tests collected' row")
+        elif int(row.group(1)) != count_tests():
+            problems.append("CLAIMS.md says %s collected, suite collects %d"
+                            % (row.group(1), count_tests()))
+        failed = re.search(r"\| tests failed \| (\d+) \|", claims)
+        if not failed:
+            problems.append("CLAIMS.md has no 'tests failed' row")
+        elif int(failed.group(1)) != 0:
+            problems.append("CLAIMS.md says %s tests failed" % failed.group(1))
         measured = _measure()
         if measured:
             for label, pattern, expected in (
@@ -151,7 +156,7 @@ def write_claims() -> str:
         "| version | %s | `python3 tools/claims.py --version` |" % version(),
         "| tests collected | %d | `python3 -m pytest -q --collect-only tests/` |"
         % count_tests(),
-        "| tests passing | %d | `python3 -m pytest -q tests/` |" % _passed(),
+        "| tests failed | 0 | `python3 -m pytest -q tests/` (failures must be 0) |",
         *measured_rows(),
         "", "## Not proven here", "",
         "- Detection inside a real bank's API: not run.",

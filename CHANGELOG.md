@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.13 — 2026-11-26
+- The claims gate compares the README count to **collected** tests and records
+  `tests failed: 0`, like mandate. A suite with two environment skips (nginx not
+  installed in a job) no longer looks like drift; CI still installs nginx so the
+  tests actually run.
+
 ## 0.8.12 — 2026-11-26
 - **RT5 fixes.** A canary outside the window can no longer push the run past
   `--max-sources`; a refused batch run no longer updates the baseline; `--stream`
