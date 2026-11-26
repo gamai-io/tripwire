@@ -28,8 +28,10 @@ class NginxAccepts(unittest.TestCase):
             fh.write(config_body)
         conf = os.path.join(td, "nginx.conf")
         with open(conf, "w", encoding="utf-8") as fh:
-            fh.write("events {}\nhttp {\n  include %s;\n  server { listen 127.0.0.1:18080; }\n}\n"
-                     % deny)
+            fh.write("error_log %s/error.log;\npid %s/nginx.pid;\n"
+                     "events {}\nhttp {\n  access_log off;\n  include %s;\n"
+                     "  server { listen 127.0.0.1:18080; }\n}\n"
+                     % (td, td, deny))
         return subprocess.run([NGINX, "-t", "-p", td, "-c", conf],
                               capture_output=True, text=True)
 
