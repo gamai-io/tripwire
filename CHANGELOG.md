@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.5 — 2026-11-26
+- `docs/FALSE_POSITIVES.md` said the held-out sample was 300/60 while the table
+  in the same section showed 0/360, 64/80 and 80/80. It is 360 benign and 80
+  attack sessions.
+
 ## 0.8.4 — 2026-11-26
 - A path anomaly now obeys `--min-level` too. It is a high-severity signal, but
   it used to be written to the ledger even at `--min-level critical`; a test
