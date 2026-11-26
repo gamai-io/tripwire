@@ -2,7 +2,7 @@
 
 | claim | value | command |
 |---|---|---|
-| version | 0.8.5 | `python3 tools/claims.py --version` |
+| version | 0.8.6 | `python3 tools/claims.py --version` |
 | tests collected | 101 | `python3 -m pytest -q --collect-only tests/` |
 | tests passing | 101 | `python3 -m pytest -q tests/` |
 | benign sessions flagged | 0 / 360 | `python3 tools/gen_corpus.py --out corpus --benign 360 --attack 80 && python3 tools/measure.py --corpus corpus` |

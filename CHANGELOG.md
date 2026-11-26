@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.6 — 2026-11-26
+- The sdist now carries `docs/` (it only shipped README, tests and the package),
+  so the measured false-positive report travels with the release instead of
+  existing only in git.
+
 ## 0.8.5 — 2026-11-26
 - `docs/FALSE_POSITIVES.md` said the held-out sample was 300/60 while the table
   in the same section showed 0/360, 64/80 and 80/80. It is 360 benign and 80
