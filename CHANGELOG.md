@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.11 — 2026-11-26
+- The claims gate ran the suite twice per README match, so a transient pytest
+  failure produced "claims 143 tests, suite has 143 passing" and failed CI. It now
+  runs once and says "could not run the suite" instead of inventing a drift.
+
 ## 0.8.10 — 2026-11-26
 - **A source-rotating flood is refused, not half-scored.** `--stream` memory is
   bounded per source; a window with hundreds of thousands of distinct addresses

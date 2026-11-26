@@ -98,10 +98,15 @@ def check() -> list[str]:
     readme = open(os.path.join(ROOT, "README.md"), encoding="utf-8").read()
     if not re.search(r"\d+\s+tests?", readme):
         problems.append("README.md states no test count; a silent pass is not a claim")
+    passed = _passed()
     for match in re.finditer(r"(?P<n>\d+) tests", readme):
-        if int(match.group("n")) != _passed():
+        if passed < 0:
+            problems.append("could not run the test suite; the README test count "
+                            "was not checked")
+            break
+        if int(match.group("n")) != passed:
             problems.append("README claims %s tests, suite has %d passing"
-                            % (match.group("n"), _passed()))
+                            % (match.group("n"), passed))
     # CLAIMS.md is the evidence index; a stale number there lies with authority
     claims_path = os.path.join(ROOT, "CLAIMS.md")
     if os.path.exists(claims_path):
