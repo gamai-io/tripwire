@@ -21,11 +21,10 @@ jobs:
         run: python -m pip install --upgrade pip && python -m pip install -e . && python -m pip install pytest ruff build twine
       - name: Lint
         run: ruff check .
+      - name: nginx (the deny-list parse test needs the real binary)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq nginx-light
       - name: Claims (version, changelog, test count)
         run: python3 tools/claims.py --check
-      - name: nginx (for the deny-list parse test)
-        if: matrix.python-version == '3.12'
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq nginx-light
       - name: Tests
         run: python -m pytest -q tests/
       - name: Reproducible wheel (3.12 only)
