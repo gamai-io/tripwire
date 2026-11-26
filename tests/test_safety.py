@@ -224,3 +224,36 @@ class FutureAndGarbage(unittest.TestCase):
             quiet = {"sessions": {}, "evidence": {}}
             detect.write_deny_files(quiet, None, js, now=NOW + 60)
             self.assertEqual(len(json.load(open(js))["deny"]), 1)
+
+
+class Exceptions(unittest.TestCase):
+    def test_an_active_exception_prevents_a_deny_and_says_who_allowed_it(self) -> None:
+        result = {"sessions": {"8.8.4.4": {"level": "critical", "points": 10,
+                                           "findings": [{"rule": "canary_used"}]}},
+                  "evidence": {}}
+        exceptions = [{"ip": "8.8.4.4", "until": int(NOW) + 3600,
+                       "approver": "ops", "reason": "our scanner"}]
+        detect.apply_exceptions(result, exceptions, now=NOW)
+        out = detect.deny_list(result)
+        self.assertEqual(out["count"], 0)
+        self.assertIn("ops", out["skipped"][0]["why"])
+
+    def test_an_expired_exception_does_not_apply(self) -> None:
+        result = {"sessions": {"8.8.4.4": {"level": "critical", "points": 10,
+                                           "findings": [{"rule": "canary_used"}]}},
+                  "evidence": {}}
+        exceptions = [{"ip": "8.8.4.4", "until": int(NOW) - 1, "approver": "ops"}]
+        detect.apply_exceptions(result, exceptions, now=NOW)
+        self.assertEqual(detect.deny_list(result)["count"], 1)
+
+    def test_an_incomplete_exception_is_rejected(self) -> None:
+        import json
+        import os
+        import tempfile
+        with tempfile.TemporaryDirectory() as td:
+            path = os.path.join(td, "exceptions.json")
+            json.dump({"exceptions": [{"ip": "8.8.4.4", "reason": "no expiry"},
+                                      {"ip": "8.8.4.5", "until": int(NOW) + 60,
+                                       "approver": "ops"}]}, open(path, "w"))
+            loaded = detect.load_exceptions(path)
+            self.assertEqual([item["ip"] for item in loaded], ["8.8.4.5"])

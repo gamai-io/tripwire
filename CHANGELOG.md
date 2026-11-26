@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.8.2 — 2026-11-26
+- **The ledger only gets what the operator asked for.** `watch --min-level` now
+  filters the alerts that are written (a `--min-level high` run no longer writes
+  medium findings), and `--state` suppresses repeats instead of appending a fresh
+  alert every minute.
+- **Exceptions that expire and are attributable**: `--exceptions FILE` with
+  `{ip, until, approver, reason}`. An entry without `until` or `approver` is ignored,
+  an active one is reported as `exception until … (approver)`, and the deny list
+  never blocks an excepted address.
+- 5 new tests; 100 total.
+
 ## 0.8.1 — 2026-11-25
 - `tripwire canary generate --plant-dir DIR` writes decoy API documents that
   contain the tokens, so planting is one command instead of hand-editing a file.

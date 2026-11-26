@@ -444,6 +444,8 @@ def _apply_baseline(result: dict, rows: list[dict], path: str, factor: float,
 def watch(log_path: str, registry: dict | None = None, window: int = 600,
           ledger: str | None = None, fmt: str = "auto",
           now: float | None = None, trusted: list | None = None,
+          min_level: str = "medium", state_path: str = "",
+          exceptions: list | None = None,
           baseline_path: str = "", baseline_factor: float = 3.0,
           baseline_floor: int = 10, baseline_update: bool = True) -> dict:
     """Score a file.
@@ -471,12 +473,21 @@ def watch(log_path: str, registry: dict | None = None, window: int = 600,
                                 "reason": "distributed scan across sources",
                                 "ts": time.time(), "log": log_path,
                                 "paths": result["path_anomalies"]})
+    if exceptions:
+        result = apply_exceptions(result, exceptions, now=now)
+    if state_path:
+        result = apply_state(result, state_path)
     if ledger:
-        alerts = {ip: s for ip, s in result["sessions"].items() if s["level"] != "low"}
+        order = {"low": 0, "medium": 1, "high": 2, "critical": 3}
+        floor = order.get(min_level, 1)
+        alerts = {ip: s for ip, s in result["sessions"].items()
+                  if order.get(s["level"], 0) >= floor
+                  and (not state_path or s.get("is_new"))}
         if alerts:
             append_receipt(ledger, {"v": 1, "type": "control", "action": "alert",
                                     "actor": "tripwire",
                                     "reason": "inbound agent behaviour",
+                                    "min_level": min_level,
                                     "ts": time.time(), "log": log_path,
                                     "canary_hits": result["canary_hits"],
                                     "findings": alerts})
@@ -635,6 +646,45 @@ def read_deny_map(path: str) -> dict:
     return entries
 
 
+def load_exceptions(path: str) -> list[dict]:
+    """A whitelist that expires, says who allowed it and why.
+
+    An exception without an expiry is a permanent hole nobody remembers; without a
+    name it is unattributable. Both are required here.
+    """
+    if not path or not os.path.exists(path):
+        return []
+    try:
+        data = json.load(open(path, encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    items = data.get("exceptions") if isinstance(data, dict) else data
+    out = []
+    for item in items or []:
+        if not isinstance(item, dict) or not item.get("ip"):
+            continue
+        if not item.get("until") or not item.get("approver"):
+            continue          # reject silently-incomplete exceptions
+        out.append({"ip": str(item["ip"]), "until": int(item["until"]),
+                    "approver": str(item["approver"]),
+                    "reason": str(item.get("reason") or "")})
+    return out
+
+
+def apply_exceptions(result: dict, exceptions: list[dict],
+                     now: float | None = None) -> dict:
+    moment = time.time() if now is None else float(now)
+    active = {item["ip"]: item for item in exceptions if int(item["until"]) > moment}
+    for ip, session in result["sessions"].items():
+        item = active.get(ip)
+        if item:
+            session["exception"] = {"until": item["until"],
+                                    "approver": item["approver"],
+                                    "reason": item["reason"]}
+    result["exceptions_active"] = len(active)
+    return result
+
+
 def deny_list(result: dict, min_level: str = "medium", now: float | None = None,
               ttl_s: int = 3600, ignore: set[str] | None = None,
               allow_volume: bool = False, previous: dict | None = None,
@@ -653,6 +703,12 @@ def deny_list(result: dict, min_level: str = "medium", now: float | None = None,
     ignore = ignore or set()
     for ip, session in sorted(result["sessions"].items()):
         if order.get(session["level"], 0) < floor:
+            continue
+        if session.get("exception"):
+            skipped.append({"ip": ip, "level": session["level"],
+                            "why": "exception until %s (%s)"
+                                   % (session["exception"].get("until"),
+                                      session["exception"].get("approver"))})
             continue
         if ip in ignore or not _blockable(ip):
             skipped.append({"ip": ip, "level": session["level"],

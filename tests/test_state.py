@@ -56,3 +56,66 @@ class State(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LedgerWrites(unittest.TestCase):
+    def _log(self, ip="8.8.4.4"):
+        import json
+        import tempfile
+        import time as _t
+        td = tempfile.mkdtemp()
+        path = os.path.join(td, "a.jsonl")
+        now = _t.time() - 30
+        rows = [
+            {"ts": now, "ip": ip, "ua": "Mozilla/5.0 (Macintosh) Chrome/157",
+             "method": "GET", "path": "/", "status": 403, "auth": "k"},
+            {"ts": now + 1, "ip": ip, "ua": "Mozilla/5.0 (Linux; Android 15) Mobile",
+             "method": "GET", "path": "/", "status": 403, "auth": "k"},
+            {"ts": now + 2, "ip": ip, "ua": "curl/8.7.1", "method": "GET",
+             "path": "/api", "status": 401, "auth": "k"},
+        ]
+        with open(path, "w") as fh:
+            for row in rows:
+                fh.write(json.dumps(row) + "\n")
+        return td, path
+
+    def test_a_repeat_does_not_write_a_second_alert(self) -> None:
+        import os as _os
+
+        from tripwire import detect
+        td, path = self._log()
+        ledger = _os.path.join(td, "alerts.jsonl")
+        state = _os.path.join(td, "state.json")
+        detect.watch(path, ledger=ledger, state_path=state, min_level="medium")
+        detect.watch(path, ledger=ledger, state_path=state, min_level="medium")
+        detect.watch(path, ledger=ledger, state_path=state, min_level="medium")
+        lines = open(ledger).read().strip().splitlines()
+        self.assertEqual(len(lines), 1, "a repeat wrote another alert")
+
+    def test_min_level_filters_what_lands_in_the_ledger(self) -> None:
+        import json
+        import os as _os
+        import tempfile
+        import time as _t
+
+        from tripwire import detect
+        td = tempfile.mkdtemp()
+        path = _os.path.join(td, "a.jsonl")
+        now = _t.time() - 30
+        rows = [
+            {"ts": now, "ip": "8.8.4.4", "ua": "Mozilla/5.0 (Macintosh) Chrome/157",
+             "method": "GET", "path": "/pricing", "status": 200, "auth": "k"},
+            {"ts": now + 1, "ip": "8.8.4.4",
+             "ua": "Mozilla/5.0 (Linux; Android 15) Mobile",
+             "method": "GET", "path": "/pricing", "status": 200, "auth": "k"},
+            {"ts": now + 2, "ip": "8.8.4.4", "ua": "curl/8.7.1", "method": "GET",
+             "path": "/pricing", "status": 200, "auth": "k"},
+        ]
+        with open(path, "w") as fh:
+            for row in rows:
+                fh.write(json.dumps(row) + "\n")
+        ledger = _os.path.join(td, "alerts.jsonl")
+        res = detect.watch(path, ledger=ledger, min_level="high")
+        self.assertEqual(res["sessions"]["8.8.4.4"]["level"], "medium")
+        self.assertFalse(_os.path.exists(ledger),
+                         "a medium alert was written at min-level high")

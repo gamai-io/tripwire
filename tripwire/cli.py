@@ -72,6 +72,8 @@ def main(argv=None) -> int:
                          default=None,
                          help="CIDR of a proxy whose X-Forwarded-For is trusted "
                               "(repeatable; unlisted peers keep their own address)")
+    p_watch.add_argument("--exceptions", default=None,
+                         help="JSON whitelist with ip, until and approver")
     p_watch.add_argument("--ignore", action="append", default=None,
                          help="address never to deny (repeatable, e.g. your scanner)")
 
@@ -143,8 +145,6 @@ def main(argv=None) -> int:
         floor = order[a.min_level]
         flagged = {ip: s for ip, s in res["sessions"].items()
                    if order.get(s["level"], 0) >= floor}
-        if a.state:
-            res = detect.apply_state(res, a.state, a.state_ttl)
         deny = detect.write_deny_files(res, a.deny_map, a.deny_json,
                                        min_level=a.min_level, ttl_s=a.deny_ttl,
                                        ignore=set(a.ignore or ()),
