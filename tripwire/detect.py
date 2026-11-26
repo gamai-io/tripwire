@@ -28,6 +28,7 @@ import ipaddress
 import json
 import os
 import re
+import sys
 import tempfile
 import time
 import urllib.parse
@@ -352,6 +353,19 @@ def watch_stream(log_path: str, registry: dict | None = None, window: int = 600,
     unioned per source and points take the maximum, so a chunk boundary can lose a
     timing correlation between two rules but never invents one.
     """
+    if window <= 0:
+        # "no window" means the whole file; a stream that trims by a window of
+        # zero would drop every row except the newest and call it clean
+        plain = watch(log_path, registry, window=0, ledger=ledger, fmt=fmt,
+                      now=now, trusted=trusted, min_level=min_level,
+                      state_path=state_path, state_ttl=state_ttl,
+                      exceptions=exceptions, baseline_path=baseline_path,
+                      baseline_factor=baseline_factor,
+                      baseline_floor=baseline_floor,
+                      baseline_update=baseline_update)
+        plain["stream"] = False
+        plain["chunk"] = chunk
+        return plain
     from collections import deque
     kept: deque = deque()
     merged: dict[str, dict] = {}
@@ -359,10 +373,12 @@ def watch_stream(log_path: str, registry: dict | None = None, window: int = 600,
     anomalies: dict[str, dict] = {}
     total = skipped = future = 0
     latest = 0.0
+    last_ts = float("-inf")
     wall = time.time()
     since_analysis = 0
     rows_seen: list[dict] = []
     stream_canaries: list[dict] = []
+    read_stats: dict = {}
 
     def analyse_window(final: bool = False) -> None:
         rows = list(kept)
@@ -380,7 +396,7 @@ def watch_stream(log_path: str, registry: dict | None = None, window: int = 600,
         if final:
             rows_seen.extend(rows)
 
-    for row in logread.iter_rows(log_path, fmt, trusted):
+    for row in logread.iter_rows(log_path, fmt, trusted, stats=read_stats):
         total += 1
         text = " ".join(str(row.get(k) or "") for k in
                         ("path", "ua", "referer", "query", "body", "auth"))
@@ -398,9 +414,17 @@ def watch_stream(log_path: str, registry: dict | None = None, window: int = 600,
             skipped += 1
             continue
         latest = max(latest, ts)
-        kept.append(row)
-        since_analysis += 1
         cutoff = latest - window
+        if ts < cutoff:
+            skipped += 1          # already outside the window; never enter it
+            continue
+        kept.append(row)
+        if ts < last_ts:
+            # a collector that writes out of order must not leave stale rows in
+            # the deque forever: re-order once, then prune by timestamp
+            kept = deque(sorted(kept, key=lambda r: _ts(r.get("ts")) or 0))
+        last_ts = max(last_ts, ts)
+        since_analysis += 1
         while kept and float(kept[0].get("ts") or 0) < cutoff:
             kept.popleft()
         # bound memory by sources in the window, not by every source ever seen
@@ -418,6 +442,9 @@ def watch_stream(log_path: str, registry: dict | None = None, window: int = 600,
                 kept.popleft()
     analyse_window(final=True)
     canary_hits.extend(stream_canaries)
+    # lines the reader refused (oversize, duplicate keys, bad timestamps) are
+    # part of the skipped total: a run that hid them would look cleaner than it is
+    skipped += int(read_stats.get("skipped") or 0)
     for hit in stream_canaries:
         session = merged.get(str(hit["ip"]))
         if session is None:
@@ -434,6 +461,9 @@ def watch_stream(log_path: str, registry: dict | None = None, window: int = 600,
     result = {"window_s": window, "sources": len(merged), "rows": total,
               "skipped_lines": skipped, "future_rows": future, "empty": total == 0,
               "stream": True, "chunk": chunk,
+              "oversize_lines": read_stats.get("oversize", 0),
+              "bad_timestamps": read_stats.get("bad_timestamps", 0),
+              "duplicate_keys": read_stats.get("duplicate_keys", 0),
               "rows_in_window": len(kept),
               "canary_hits": canary_hits,
               "auth_failure_streaks": [],
@@ -457,7 +487,7 @@ def watch_stream(log_path: str, registry: dict | None = None, window: int = 600,
     result["state_applied"] = bool(state_path)
     _write_alert_records(result, ledger, log_path, min_level, extra={"stream": True})
     if state is not None:
-        save_state(state_path, state)
+        _save_state_or_warn(state_path, state, result)
     return result
 
 
@@ -589,6 +619,9 @@ def watch(log_path: str, registry: dict | None = None, window: int = 600,
 
     result["rows"] = len(rows)
     result["skipped_lines"] = stats.get("skipped", 0) + result.get("invalid_rows", 0)
+    result["oversize_lines"] = stats.get("oversize", 0)
+    result["bad_timestamps"] = stats.get("bad_timestamps", 0)
+    result["duplicate_keys"] = stats.get("duplicate_keys", 0)
     result["log_format"] = stats.get("format")
     result["empty"] = not rows
     result["now"] = now
@@ -602,7 +635,7 @@ def watch(log_path: str, registry: dict | None = None, window: int = 600,
     result["state_applied"] = bool(state_path)
     _write_alert_records(result, ledger, log_path, min_level)
     if state is not None:
-        save_state(state_path, state)
+        _save_state_or_warn(state_path, state, result)
     return result
 
 
@@ -629,14 +662,24 @@ def path_burst(rows: list[dict], threshold: int = 40, within: float = 60.0) -> l
 
     Status-independent on purpose: a scanner behind a redirect-heavy vhost
     answers 301 to everything and never trips the 4xx rules.
+
+    A crawler UA is not a free pass: `curl -A Googlebot` walks the site freely
+    unless being a real crawler is corroborated. The signal is that a real
+    crawler does not collect `401`/`403` while walking, so the exemption only
+    applies to an address with no failed auth in the window.
     """
+    failures: dict[str, int] = defaultdict(int)
+    for row in rows:
+        if _status(row.get("status")) in FAILED:
+            failures[str(row.get("ip") or "?")] += 1
     by_ip = defaultdict(list)
     for row in rows:
+        ip = str(row.get("ip") or "?")
         ua = str(row.get("ua") or "").lower()
-        if any(bot in ua for bot in GOOD_BOTS):
+        if any(bot in ua for bot in GOOD_BOTS) and not failures.get(ip):
             continue
-        by_ip[str(row.get("ip") or "?")].append((float(row.get("ts") or 0),
-                                                 str(row.get("path") or "")))
+        by_ip[ip].append((float(row.get("ts") or 0),
+                          str(row.get("path") or "")))
     out = []
     for ip, items in by_ip.items():
         items.sort()
@@ -727,15 +770,21 @@ def mark_state(result: dict, state_path: str, ttl_s: int = 3600,
     for item in result.get("path_anomalies") or []:
         key = str(item.get("path") or "?")
         previous = paths.get(key)
+        sources = item.get("sources") or []
+        fingerprint = "%d:%s%s" % (
+            item.get("ips") or 0, ",".join(str(s) for s in sources[:25]),
+            "..." if item.get("sources_truncated") else "")
         expired = not previous or float(previous.get("expires") or 0) <= moment
         worse = bool(previous) and order.get(item.get("level", "high"), 2) > order.get(
             previous.get("level"), 2)
-        item["is_new"] = bool(expired or worse)
+        changed = bool(previous) and previous.get("sources") != fingerprint
+        item["is_new"] = bool(expired or worse or changed)
         if item["is_new"]:
             new_paths += 1
         else:
             item["repeat"] = True
         paths[key] = {"level": item.get("level", "high"),
+                      "sources": fingerprint,
                       "first_seen": (previous or {}).get("first_seen", int(moment)),
                       "expires": int(moment + ttl_s)}
     state["alerts"] = {ip: item for ip, item in alerts.items()
@@ -757,6 +806,16 @@ def save_state(state_path: str, state: dict) -> None:
     with os.fdopen(handle, "w", encoding="utf-8") as fh:
         json.dump(state, fh, indent=1, sort_keys=True)
     os.replace(tmp, state_path)
+
+
+def _save_state_or_warn(state_path: str, state: dict, result: dict) -> None:
+    """The ledger record is already written; a state failure must be loud, not fatal."""
+    try:
+        save_state(state_path, state)
+    except OSError as exc:
+        result["state_error"] = str(exc)
+        print("tripwire: state not saved (%s); the same alert may repeat"
+              % exc, file=sys.stderr)
 
 
 def apply_state(result: dict, state_path: str, ttl_s: int = 3600,
@@ -964,8 +1023,11 @@ def write_deny_files(result: dict, map_path: str | None, json_path: str | None,
         except OSError:
             old = ""
     out["changed"] = old != out["nginx"]
+    # stage every file first, then replace: if the JSON write fails, the deny
+    # map must not already have been swapped in (the apply unit watches it)
+    staged = []
     try:
-        for path, payload in ((map_path, out["nginx"]), (json_path, None)):
+        for path, payload in ((json_path, None), (map_path, out["nginx"])):
             if not path:
                 continue
             directory = os.path.dirname(os.path.abspath(path))
@@ -977,8 +1039,15 @@ def write_deny_files(result: dict, map_path: str | None, json_path: str | None,
                     json.dump(out["json"], fh, indent=1, sort_keys=True)
                 else:
                     fh.write(payload)
+            staged.append((tmp, path))
+        for tmp, path in staged:
             os.replace(tmp, path)
     except OSError as exc:
+        for tmp, _path in staged:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
         return {"error": "deny list write failed: %s" % exc, "entries": [],
                 "count": 0, "skipped": out.get("skipped") or [],
                 "nginx": "", "json": {}, "changed": False}

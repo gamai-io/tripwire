@@ -53,7 +53,10 @@ class CanaryAlone(unittest.TestCase):
             token = canary.generate(1, path=reg)["tokens"][0]
             path = os.path.join(td, "a.jsonl")
             with open(path, "w") as fh:
-                fh.write(json.dumps({"ts": 1.0, "ip": "8.8.4.4", "ua": "curl/8.7.1",
+                # a real epoch (2020) that the window still excludes; ts=1.0 is now
+                # refused by logread.sane_epoch as an impossible timestamp
+                fh.write(json.dumps({"ts": 1_600_000_000.0, "ip": "8.8.4.4",
+                                     "ua": "curl/8.7.1",
                                      "method": "GET", "path": "/x", "status": 200,
                                      "auth": token}) + "\n")
             # a window that excludes the row: the canary must still be reported

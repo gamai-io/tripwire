@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import json
 import os
 import subprocess
@@ -12,6 +13,29 @@ from . import canary, detect
 
 def _emit(obj) -> None:
     print(json.dumps(obj, indent=1, ensure_ascii=False, sort_keys=True))
+
+
+def _proxy_problem(values, allow_wide: bool) -> dict | None:
+    """A prefix wide enough to include the attacker trusts the attacker.
+
+    `--trusted-proxy 10.0.0.1/8` silently trusts every 10.x address, so anyone
+    who can reach the proxy port can set `X-Forwarded-For` and get someone else
+    blocked. Refusing the typo is cheaper than discovering it in an incident.
+    """
+    for item in values or []:
+        try:
+            network = ipaddress.ip_network(str(item), strict=False)
+        except ValueError:
+            return {"error": "Usage",
+                    "message": "--trusted-proxy %r is not an IPv4/IPv6 CIDR" % item}
+        minimum = 16 if network.version == 4 else 48
+        if network.prefixlen < minimum and not allow_wide:
+            return {"error": "Usage",
+                    "message": "--trusted-proxy %s trusts %d addresses; refusing a "
+                               "prefix shorter than /%d (pass --allow-wide-proxy if "
+                               "your load balancer really owns that range)"
+                               % (network, network.num_addresses, minimum)}
+    return None
 
 
 def main(argv=None) -> int:
@@ -73,6 +97,10 @@ def main(argv=None) -> int:
                          default=None,
                          help="CIDR of a proxy whose X-Forwarded-For is trusted "
                               "(repeatable; unlisted peers keep their own address)")
+    p_watch.add_argument("--allow-wide-proxy", dest="allow_wide_proxy",
+                         action="store_true",
+                         help="permit --trusted-proxy prefixes shorter than /16 (IPv4) "
+                              "or /48 (IPv6), e.g. a whole /8 you actually own")
     p_watch.add_argument("--exceptions", default=None,
                          help="JSON whitelist with ip, until and approver")
     p_watch.add_argument("--ignore", action="append", default=None,
@@ -113,6 +141,10 @@ def main(argv=None) -> int:
         return 0
 
     if a.cmd == "watch":
+        proxy_error = _proxy_problem(a.trusted_proxy, a.allow_wide_proxy)
+        if proxy_error:
+            _emit(proxy_error)
+            return 2
         if a.registry and not os.path.exists(a.registry):
             # an explicit registry that is missing turns off the strongest rule
             _emit({"error": "RegistryMissing",
@@ -194,6 +226,9 @@ def main(argv=None) -> int:
         _emit({"sources": res["sources"], "rows": res.get("rows"),
                "rows_in_window": res.get("rows_in_window"),
                "skipped_lines": res.get("skipped_lines", 0),
+               "oversize_lines": res.get("oversize_lines", 0),
+               "bad_timestamps": res.get("bad_timestamps", 0),
+               "duplicate_keys": res.get("duplicate_keys", 0),
                "invalid_rows": res.get("invalid_rows", 0),
                "xff_ignored": res.get("xff_ignored", 0),
                "flagged": len(flagged),

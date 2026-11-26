@@ -58,6 +58,22 @@ ship each segment separately.
 3 and 4 exist because the earlier version returned 0 for a log it never read and
 reported `planted: false` for a corrupt canary registry. Both are now tests.
 
+## What the reader refuses
+
+A log is input, not a fact. Lines are read with a 1 MiB cap (`logread.MAX_LINE`):
+a longer line is drained in chunks and counted as `oversize` instead of being held
+in memory, so one malformed 40 MB line cannot cost 40 MB of RSS. JSONL is parsed
+with duplicate keys **rejected** (a second `"ip"` is a tamper, not a last-wins
+update), and a timestamp outside 2000-01-01 .. now+10 years is skipped. Combined
+log fields are validated before `calendar.timegm`, so hour 99 is refused instead
+of silently rolling the event two days forward. Every refused line lands in
+`skipped_lines`, with `oversize_lines`, `duplicate_keys` and `bad_timestamps`
+broken out in the JSON output.
+
+`--trusted-proxy` refuses a prefix shorter than /16 (IPv4) or /48 (IPv6) with
+exit 2 unless `--allow-wide-proxy` is passed: `10.0.0.1/8` trusts everyone in
+`10.0.0.0/8`, including the attacker's `X-Forwarded-For`.
+
 ## Deny list lifecycle
 
 `--deny-map` merges with what is already on disk:

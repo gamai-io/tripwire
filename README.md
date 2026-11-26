@@ -83,8 +83,12 @@ already carries the real client), or include `xff` in the JSONL line and name th
 proxy:
 
 ```bash
-tripwire watch --log access.jsonl --trusted-proxy 10.0.0.0/8 --trusted-proxy 104.16.0.0/13
+tripwire watch --log access.jsonl --trusted-proxy 10.0.0.0/16 --trusted-proxy 104.16.0.0/13
 ```
+
+A prefix shorter than `/16` (IPv4) or `/48` (IPv6) is refused with exit 2,
+because `10.0.0.1/8` trusts every `10.x` address and an attacker may reach the
+proxy port. Pass `--allow-wide-proxy` only when you really own that range.
 
 `X-Forwarded-For` from an address you did **not** list is ignored and recorded as
 `xff_ignored`, because otherwise anyone can pick someone else's address and get
@@ -239,7 +243,7 @@ and what is deliberately missing are in
 python -m pytest -q tests/
 ```
 
-120 tests: the reported timeline scores **high** with all four decisive rules; a
+139 tests: the reported timeline scores **high** with all four decisive rules; a
 canary in the same log is **critical**; a developer switching to `curl` stays
 **low**; a doc reader without a failed check is suppressed; one document unlocks
 one path; a redirect-heavy scan is caught without any 4xx; a search bot is not a

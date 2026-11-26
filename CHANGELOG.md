@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.8.8 — 2026-11-26
+Fourth review (RT4) plus the remaining low items from RT3.
+
+- **`--stream --window 0` no longer hides multi-event rules.** A zero window means
+  "the whole file"; the stream path trimmed by zero and dropped everything except
+  the newest row, reporting a clean run. It now delegates to the batch path.
+- **Out-of-order timestamps** no longer leave stale rows in the window forever:
+  a row already outside the window is not admitted, and a decreasing timestamp
+  re-orders the deque once before pruning.
+- **A partial deny write cannot reach nginx.** Files are staged first and only
+  replaced after both wrote; the JSON is written before the map the apply unit
+  watches. A failure leaves the previous list untouched.
+- **A failed state write is reported, not fatal.** The ledger record is already
+  appended; the run now returns `state_error` and prints to stderr instead of
+  crashing and duplicating the alert on the next run.
+- **Path anomalies remember the source set.** A new campaign on the same path with
+  a different source fingerprint is new again, not suppressed as a repeat.
+- Spoofed good-bot UAs no longer evade `path_burst`: the exemption applies only
+  when that source has zero 401/403 in the window.
+- Lines longer than 1 MiB are drained and counted (`oversize_lines`) instead of
+  being read whole.
+- JSONL with duplicate keys and timestamps outside 2000..now+10y are refused and
+  counted (`duplicate_keys`, `bad_timestamps`); combined logs validate hour 99
+  instead of normalising it.
+- `--trusted-proxy` refuses a prefix wider than /16 (IPv4) or /48 (IPv6) unless
+  `--allow-wide-proxy` is passed.
+- Docs: the `/8` proxy example is gone; reader refusals and `window 0` semantics
+  are stated.
+
 ## 0.8.7 — 2026-11-26
 Third adversarial review (RT3). The library was tested; the shipped CLI was not.
 

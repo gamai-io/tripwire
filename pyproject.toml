@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gamai-tripwire"
-version = "0.8.7"
+version = "0.8.8"
 description = "Detect an inbound AI agent by behaviour, not blocklists: planted canaries, spec-derived novel paths, tool switching, key probing."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -14,8 +14,14 @@ authors = [{name = "Renato Šuster", email = "renato@gamatrade.ba"}]
 keywords = ["ai-agents", "security", "detection", "canary", "honeytoken", "access-log"]
 dependencies = ["gama-mandate>=0.43"]
 classifiers = [
-  "Programming Language :: Python :: 3",
+  "Development Status :: 4 - Beta",
   "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
   "Topic :: Security",
 ]
 
@@ -23,6 +29,7 @@ classifiers = [
 Homepage = "https://gamai.io/tripwire.html"
 Repository = "https://github.com/gamai-io/tripwire"
 Issues = "https://github.com/gamai-io/tripwire/issues"
+Changelog = "https://github.com/gamai-io/tripwire/blob/main/CHANGELOG.md"
 
 [project.scripts]
 tripwire = "tripwire.cli:main"

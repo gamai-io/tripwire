@@ -12,6 +12,16 @@ import gzip
 import ipaddress
 import json
 import re
+import time
+
+# A line longer than this is a collector bug or a deliberate flood, not a log
+# row. Reading it whole would let one 40 MB line cost 40 MB of RSS, so it is
+# drained in chunks and counted instead.
+MAX_LINE = 1024 * 1024
+# An epoch outside this range is not a timestamp we can reason about. The upper
+# bound is relative to the clock so a long-lived pipeline does not age out.
+EPOCH_FLOOR = 946_684_800              # 2000-01-01T00:00:00Z
+EPOCH_CEILING = 10 * 365 * 86_400      # ten years ahead of now
 
 COMBINED = re.compile(
     r'^(?P<ip>\S+) \S+ (?P<user>\S+) \[(?P<ts>[^\]]+)\] '
@@ -24,15 +34,29 @@ _MONTHS = {m: i for i, m in enumerate(
 
 
 def _parse_time(text: str) -> float | None:
-    """25/Nov/2026:00:00:22 +0100 -> epoch seconds (no locale dependency)."""
+    """25/Nov/2026:00:00:22 +0100 -> epoch seconds (no locale dependency).
+
+    The fields are validated here, not left to `calendar.timegm`, which silently
+    normalises ``25/Nov/2026:99:00:22`` into two days later. A clock that is off
+    by four days must not move an event out of its window.
+    """
     try:
         date_part, zone = text.split(" ", 1)
         day, month, rest = date_part.split("/")
         year, hour, minute, second = rest.split(":")
+        day, year = int(day), int(year)
+        hour, minute, second = int(hour), int(minute), int(second)
+        zone_hour, zone_minute = int(zone[1:3]), int(zone[3:5])
+        month_number = _MONTHS[month]
+        if not (1970 <= year <= 2100
+                and 1 <= day <= calendar.monthrange(year, month_number)[1]
+                and 0 <= hour <= 23 and 0 <= minute <= 59 and 0 <= second <= 60
+                and zone_hour <= 23 and zone_minute <= 59):
+            return None
         sign = -1 if zone.startswith("-") else 1
-        offset = int(zone[1:3]) * 3600 + int(zone[3:5]) * 60
-        stamp = calendar.timegm((int(year), _MONTHS[month], int(day),
-                                 int(hour), int(minute), int(second), 0, 0, 0))
+        offset = zone_hour * 3600 + zone_minute * 60
+        stamp = calendar.timegm((year, month_number, day,
+                                 hour, minute, second, 0, 0, 0))
         return stamp - sign * offset
     except (ValueError, KeyError, IndexError):
         return None
@@ -52,6 +76,82 @@ def _status(value) -> int:
         return int(value)
     except (TypeError, ValueError):
         return 0
+
+
+class _DuplicateKey(ValueError):
+    """A JSON object named the same field twice: last-wins would hide a tamper."""
+
+
+def _pairs_without_duplicates(pairs):
+    seen = set()
+    for key, _ in pairs:
+        if key in seen:
+            raise _DuplicateKey(key)
+        seen.add(key)
+    return dict(pairs)
+
+
+def sane_epoch(value) -> bool:
+    """Can this value be a timestamp we can place in a window?
+
+    `detect` would otherwise treat an epoch of 1 or 9e18 as a real event and
+    either drop it silently or let it blind the run.
+    """
+    try:
+        ts = float(value)
+    except (TypeError, ValueError):
+        return False
+    if ts != ts:                      # NaN
+        return False
+    return EPOCH_FLOOR <= ts <= time.time() + EPOCH_CEILING
+
+
+def _parse_line(line: str, fmt: str) -> tuple[dict | None, str]:
+    """One logical line -> (row, reason-it-was-skipped)."""
+    if fmt == "combined":
+        row = parse_combined(line)
+        return row, "" if row else "unparsed"
+    try:
+        row = json.loads(line, object_pairs_hook=_pairs_without_duplicates)
+    except _DuplicateKey:
+        return None, "duplicate_keys"
+    except ValueError:
+        return None, "bad_json"
+    if not isinstance(row, dict):
+        return None, "not_object"
+    if not sane_epoch(row.get("ts")):
+        return None, "bad_timestamps"
+    if not row.get("ua_platform") and row.get("ua"):
+        row["ua_platform"] = _platform(str(row["ua"]))
+    return row, ""
+
+
+def _empty_stats(fmt: str) -> dict:
+    return {"lines": 0, "skipped": 0, "format": fmt, "oversize": 0,
+            "bad_json": 0, "bad_timestamps": 0, "duplicate_keys": 0}
+
+
+def _read_lines(fh):
+    """Yield physical lines, holding at most MAX_LINE bytes of any one of them.
+
+    An oversize line is drained and yielded as None so the caller can count it;
+    reading it whole is exactly the 40 MB RSS case this exists to avoid.
+    """
+    while True:
+        chunk = fh.readline(MAX_LINE + 1)
+        if not chunk:
+            return
+        if chunk.endswith("\n") and len(chunk) <= MAX_LINE + 1:
+            yield chunk
+            continue
+        if len(chunk) <= MAX_LINE:          # trailing line with no newline
+            yield chunk
+            return
+        while not chunk.endswith("\n"):     # drain the rest without keeping it
+            chunk = fh.readline(MAX_LINE)
+            if not chunk:
+                break
+        yield None
 
 
 def parse_combined(line: str) -> dict | None:
@@ -84,14 +184,20 @@ def parse_combined(line: str) -> dict | None:
 
 
 def guess_format(path: str) -> str:
+    seen = 0
     with _open(path) as fh:
-        for _ in range(20):
-            line = fh.readline()
-            if not line.strip():
+        for raw in _read_lines(fh):
+            seen += 1
+            if seen > 20:
+                break
+            if raw is None:
+                continue
+            line = raw.strip()
+            if not line:
                 continue
             if line.lstrip().startswith("{"):
                 return "jsonl"
-            if COMBINED.match(line.strip()):
+            if COMBINED.match(line):
                 return "combined"
     return "jsonl"
 
@@ -154,28 +260,25 @@ def load_stats(path: str, fmt: str = "auto",
                trusted: list | None = None) -> tuple[list[dict], dict]:
     fmt = guess_format(path) if fmt in ("", "auto") else fmt
     rows: list[dict] = []
-    stats = {"lines": 0, "skipped": 0, "format": fmt}
+    stats = _empty_stats(fmt)
     with _open(path) as fh:
-        for line in fh:
-            line = line.strip()
+        for raw in _read_lines(fh):
+            if raw is None:
+                stats["lines"] += 1
+                stats["skipped"] += 1
+                stats["oversize"] += 1
+                continue
+            line = raw.strip()
             if not line:
                 continue
             stats["lines"] += 1
-            if fmt == "combined":
-                row = parse_combined(line)
-            else:
-                try:
-                    row = json.loads(line)
-                except ValueError:
-                    continue
-                if not isinstance(row, dict):
-                    continue
-                if not row.get("ua_platform") and row.get("ua"):
-                    row["ua_platform"] = _platform(str(row["ua"]))
-            if row:
-                rows.append(resolve_client(row, trusted))
-            else:
+            row, reason = _parse_line(line, fmt)
+            if row is None:
                 stats["skipped"] += 1
+                if reason in stats:
+                    stats[reason] += 1
+                continue
+            rows.append(resolve_client(row, trusted))
     return rows, stats
 
 
@@ -183,27 +286,35 @@ def load(path: str, fmt: str = "auto", trusted: list | None = None) -> list[dict
     return load_stats(path, fmt, trusted)[0]
 
 
-def iter_rows(path: str, fmt: str = "auto", trusted: list | None = None):
-    """Yield rows one at a time, so a 50M-line file never lands in memory at once."""
+def iter_rows(path: str, fmt: str = "auto", trusted: list | None = None,
+              stats: dict | None = None):
+    """Yield rows one at a time, so a 50M-line file never lands in memory at once.
+
+    `stats` (optional dict) receives `lines`, `skipped` and the reason counters,
+    including `oversize` for lines longer than MAX_LINE.
+    """
     fmt = guess_format(path) if fmt in ("", "auto") else fmt
     with _open(path) as fh:
-        for line in fh:
-            line = line.strip()
+        for raw in _read_lines(fh):
+            if raw is None:
+                if stats is not None:
+                    stats["lines"] = stats.get("lines", 0) + 1
+                    stats["skipped"] = stats.get("skipped", 0) + 1
+                    stats["oversize"] = stats.get("oversize", 0) + 1
+                continue
+            line = raw.strip()
             if not line:
                 continue
-            if fmt == "combined":
-                row = parse_combined(line)
-            else:
-                try:
-                    row = json.loads(line)
-                except ValueError:
-                    continue
-                if not isinstance(row, dict):
-                    continue
-                if not row.get("ua_platform") and row.get("ua"):
-                    row["ua_platform"] = _platform(str(row["ua"]))
-            if row:
-                yield resolve_client(row, trusted)
+            if stats is not None:
+                stats["lines"] = stats.get("lines", 0) + 1
+            row, reason = _parse_line(line, fmt)
+            if row is None:
+                if stats is not None:
+                    stats["skipped"] = stats.get("skipped", 0) + 1
+                    if reason in stats:
+                        stats[reason] = stats.get(reason, 0) + 1
+                continue
+            yield resolve_client(row, trusted)
 
 
 def count_lines(path: str) -> tuple[int, int]:
@@ -211,15 +322,12 @@ def count_lines(path: str) -> tuple[int, int]:
     total = good = 0
     fmt = guess_format(path)
     with _open(path) as fh:
-        for line in fh:
-            if not line.strip():
+        for raw in _read_lines(fh):
+            if raw is not None and not raw.strip():
                 continue
             total += 1
-            if fmt == "combined":
-                good += 1 if parse_combined(line) else 0
-            else:
-                try:
-                    good += 1 if isinstance(json.loads(line), dict) else 0
-                except ValueError:
-                    pass
+            if raw is None:              # oversize is unparsable by definition
+                continue
+            if _parse_line(raw.strip(), fmt)[0] is not None:
+                good += 1
     return total, total - good
