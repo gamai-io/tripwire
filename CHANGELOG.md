@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.14 — 2026-11-26
+- **The apply script is tested, not just written.** A fake `nginx` proves that a
+  rejected list restores the previous file without a reload, a good list is
+  installed and reloaded once, and an unchanged list is not reloaded.
+- Fuzz pass over the log reader: 500 random byte lines and 300 random JSON rows
+  are skipped or rejected, never crash; a line over the 1 MiB cap is counted.
+
 ## 0.8.13 — 2026-11-26
 - The claims gate compares the README count to **collected** tests and records
   `tests failed: 0`, like mandate. A suite with two environment skips (nginx not
