@@ -1,0 +1,8 @@
+{
+ "base": "2026-11-01T00:00:00+00:00",
+ "distinct_sources": 201,
+ "generator": "tools/redact_corpus.py",
+ "lines": 2000,
+ "note": "addresses are documentation ranges; paths are salted hashes; user agents are reduced to the four classes the rules use",
+ "skipped": 0
+}

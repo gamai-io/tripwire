@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.8.15 — 2026-11-26
+- **A redacted real-log regression corpus.** `tools/redact_corpus.py` keeps the
+  timing, statuses, sizes and the number of distinct paths/sources/UA classes, and
+  replaces addresses, paths, queries and user agents. 2,000 lines from this
+  server's nginx log are frozen under `tests/corpus/redacted/` with a manifest; a
+  test asserts the detection result and that no original address/service survived.
+- **Randomised window/state invariants:** no session from an out-of-window row,
+  old rows cannot change a windowed result, a second identical run is not new, and
+  a chunk larger than the file equals the batch path (20–30 seeds each).
+
 ## 0.8.14 — 2026-11-26
 - **The apply script is tested, not just written.** A fake `nginx` proves that a
   rejected list restores the previous file without a reload, a good list is
