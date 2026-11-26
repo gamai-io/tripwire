@@ -50,7 +50,7 @@ Per family, attacks: `incident` 16/16 high, `key_prober` 16/16 high,
 ### Held-out sample
 
 The tuning decisions above were made on seed `20261125`. The same code was then
-run on a fresh sample, seed `771122`, 300 benign and 60 attack sessions:
+run on a fresh sample, seed `771122`, 360 benign and 80 attack sessions:
 
 | metric | tuning seed | held-out seed |
 |---|---|---|
