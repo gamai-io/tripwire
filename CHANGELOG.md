@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.10 — 2026-11-26
+- **A source-rotating flood is refused, not half-scored.** `--stream` memory is
+  bounded per source; a window with hundreds of thousands of distinct addresses
+  (measured: 500,000 sources ≈ 914 MB) could exhaust the box. `--max-sources`
+  (default 200,000) now makes the run exit 3 with `TooManySources` and write
+  nothing, instead of dropping the excess and reporting a clean run. The batch
+  path refuses too. Four tests, including the CLI exit code.
+- Docs state the measured 500,000-source figure and the cap.
+
 ## 0.8.9 — 2026-11-26
 - Docs: the bot-UA exemption is described as it now works (a source loses it once
   it fails auth); the provenance example points at the current release.

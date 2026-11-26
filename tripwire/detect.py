@@ -345,7 +345,8 @@ def watch_stream(log_path: str, registry: dict | None = None, window: int = 600,
                  baseline_factor: float = 3.0, baseline_floor: int = 10,
                  baseline_update: bool = True,
                  min_level: str = "medium", state_path: str = "",
-                 state_ttl: int = 3600, exceptions: list | None = None) -> dict:
+                 state_ttl: int = 3600, exceptions: list | None = None,
+                 max_sources: int = 200_000) -> dict:
     """Score a file too large to hold: keep only the window, merge per chunk.
 
     Memory is bounded by (sources inside the window), not by the file: sessions
@@ -371,9 +372,10 @@ def watch_stream(log_path: str, registry: dict | None = None, window: int = 600,
     merged: dict[str, dict] = {}
     canary_hits: list[dict] = []
     anomalies: dict[str, dict] = {}
-    total = skipped = future = 0
+    total = skipped = future = overflow = 0
     latest = 0.0
     last_ts = float("-inf")
+    max_sources = max(1, int(max_sources))
     wall = time.time()
     since_analysis = 0
     rows_seen: list[dict] = []
@@ -384,8 +386,14 @@ def watch_stream(log_path: str, registry: dict | None = None, window: int = 600,
         rows = list(kept)
         if not rows:
             return
+        nonlocal overflow
         result = analyse(rows, None, window, now=latest + 1)
         for ip, session in result["sessions"].items():
+            if ip not in merged and len(merged) >= max_sources:
+                # a source-rotating flood cannot be scored honestly; refusing is
+                # better than dropping half of it and reporting "clean"
+                overflow += 1
+                continue
             target = merged.setdefault(ip, {"points": 0, "level": "low", "findings": [],
                                             "requests": 0, "first_ts": None,
                                             "last_ts": None})
@@ -433,14 +441,28 @@ def watch_stream(log_path: str, registry: dict | None = None, window: int = 600,
                        if sess.get("level") == "low"
                        and float(sess.get("last_ts") or 0) < cutoff]:
                 del merged[ip]
-        if since_analysis >= chunk:
+        if since_analysis >= max(1, min(chunk, max_sources)):
             analyse_window()
             since_analysis = 0
+            if overflow:
+                break
         if len(kept) > chunk * 2:          # a burst: keep memory bounded, note it
             skipped += len(kept) - chunk
             while len(kept) > chunk:
                 kept.popleft()
-    analyse_window(final=True)
+    if not overflow:
+        analyse_window(final=True)
+    if overflow:
+        return {"window_s": window, "sources": len(merged), "rows": total,
+                "skipped_lines": skipped, "future_rows": future, "empty": total == 0,
+                "stream": True, "chunk": chunk, "rows_in_window": len(kept),
+                "canary_hits": canary_hits, "sessions": merged,
+                "flagged": 0, "error": "too many distinct sources (>%d); "
+                "refusing to report a partial analysis" % max_sources,
+                "oversize_lines": read_stats.get("oversize", 0),
+                "bad_timestamps": read_stats.get("bad_timestamps", 0),
+                "duplicate_keys": read_stats.get("duplicate_keys", 0),
+                "path_anomalies": [], "now": latest}
     canary_hits.extend(stream_canaries)
     # lines the reader refused (oversize, duplicate keys, bad timestamps) are
     # part of the skipped total: a run that hid them would look cleaner than it is
@@ -598,6 +620,7 @@ def watch(log_path: str, registry: dict | None = None, window: int = 600,
           now: float | None = None, trusted: list | None = None,
           min_level: str = "medium", state_path: str = "",
           state_ttl: int = 3600, exceptions: list | None = None,
+          max_sources: int = 200_000,
           baseline_path: str = "", baseline_factor: float = 3.0,
           baseline_floor: int = 10, baseline_update: bool = True) -> dict:
     """Score a file.
@@ -625,6 +648,10 @@ def watch(log_path: str, registry: dict | None = None, window: int = 600,
     result["log_format"] = stats.get("format")
     result["empty"] = not rows
     result["now"] = now
+    if len(result.get("sessions") or {}) > max(1, int(max_sources)):
+        result["error"] = ("too many distinct sources (>%d); refusing to report a "
+                           "partial analysis" % max_sources)
+        return result
     if exceptions:
         result = apply_exceptions(result, exceptions, now=now)
     _drop_excepted_paths(result)

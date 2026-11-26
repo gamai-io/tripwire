@@ -74,6 +74,10 @@ def main(argv=None) -> int:
                          help="score a file too large for memory: keep only the window")
     p_watch.add_argument("--chunk", type=int, default=200000,
                          help="rows per scoring pass in --stream mode")
+    p_watch.add_argument("--max-sources", dest="max_sources", type=int,
+                         default=200000,
+                         help="refuse to analyse more distinct sources than this "
+                              "(a source-rotating flood cannot be scored honestly)")
     p_watch.add_argument("--baseline", default=None,
                          help="JSON file with per-path history; enables distributed-scan "
                               "detection and is updated after a clean run")
@@ -172,6 +176,7 @@ def main(argv=None) -> int:
                       trusted=a.trusted_proxy,
                       min_level=a.min_level, state_path=a.state or "",
                       state_ttl=a.state_ttl, exceptions=exceptions,
+                      max_sources=a.max_sources,
                       baseline_path=a.baseline or "",
                       baseline_factor=a.baseline_factor,
                       baseline_floor=a.baseline_floor,
@@ -183,6 +188,12 @@ def main(argv=None) -> int:
                 res = detect.watch(a.log, registry, **common)
         except (OSError, ValueError) as exc:
             _emit({"error": "Unreadable", "message": str(exc)})
+            return 3
+        if res.get("error"):
+            _emit({"sources": res.get("sources"), "rows": res.get("rows"),
+                   "rows_in_window": res.get("rows_in_window"),
+                   "flagged": 0, "error": "TooManySources",
+                   "message": res["error"]})
             return 3
         if res.get("empty"):
             _emit({"sources": 0, "flagged": 0, "rows": 0,

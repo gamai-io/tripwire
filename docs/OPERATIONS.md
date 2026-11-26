@@ -114,8 +114,13 @@ one rule.
 **Streaming.** With a window smaller than the file (`--stream`), memory is bounded
 by the sources inside the window, not by the file. Measured here on 2026-11-26:
 100,000 rows / 200 sources inside a 600 s window peaked at **146 MB and 2.46 s**;
-500,000 unique sources are the worst case because every one is a live session, so
-size the box for *sources in the window* (roughly 1.5 KB each), not for the file.
+500,000 unique sources in one window peaked at **914 MB** (roughly 1.8 KB per live
+source). Size the box for *sources in the window*, not for the file.
+
+`--max-sources` (default 200,000) refuses rather than degrades: when a window has
+more distinct sources than that, the run exits 3 with `TooManySources` and writes
+nothing. A source-rotating flood is exactly the case where a partial analysis
+would look clean.
 Use `--stream` when the file spans more than the window; with `--window` covering
 the whole file there is nothing to trim and the two modes converge.
 

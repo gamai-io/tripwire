@@ -206,12 +206,18 @@ below). Measured on 2026-11-26, 100,000 rows / 200 sources inside a 600 s window
 |---|---|---|---|
 | `--stream --chunk 200000` | 600 s | **146 MB** | 2.46 s |
 
-Memory is bounded by **sources in the window** (roughly 1.5 KB each), not by the
-file: 500,000 distinct sources is the worst case because each is a live session.
+Memory is bounded by **sources in the window** (roughly 1.8 KB each), not by the
+file: 500,000 distinct sources in one window measured **914 MB**, which is why the
+next paragraph exists.
 
 ```bash
 tripwire watch --log access.log --stream --window 600 --chunk 200000
 ```
+
+**A source-rotating flood is refused, not half-scored.** `--max-sources`
+(default 200,000) is the point where a window cannot be scored honestly: the run
+stops, writes nothing to the ledger, and exits **3** with `TooManySources` instead
+of dropping the excess and reporting "clean". Raise it only with the RAM to match.
 
 `--chunk` rows are scored together and the findings are unioned per source, with
 points taking the maximum. A chunk boundary can lose a timing correlation between
@@ -243,7 +249,7 @@ and what is deliberately missing are in
 python -m pytest -q tests/
 ```
 
-139 tests: the reported timeline scores **high** with all four decisive rules; a
+143 tests: the reported timeline scores **high** with all four decisive rules; a
 canary in the same log is **critical**; a developer switching to `curl` stays
 **low**; a doc reader without a failed check is suppressed; one document unlocks
 one path; a redirect-heavy scan is caught without any 4xx; a search bot is not a
