@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.4 — 2026-11-26
+- A path anomaly now obeys `--min-level` too. It is a high-severity signal, but
+  it used to be written to the ledger even at `--min-level critical`; a test
+  covers it. The record also states its level.
+
 ## 0.8.3 — 2026-11-26
 - The claims gate now requires a test count in README (a missing anchor passed
   silently) and compares it against **passing** tests.

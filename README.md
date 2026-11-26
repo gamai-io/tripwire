@@ -230,7 +230,7 @@ and what is deliberately missing are in
 python -m pytest -q tests/
 ```
 
-100 tests: the reported timeline scores **high** with all four decisive rules; a
+101 tests: the reported timeline scores **high** with all four decisive rules; a
 canary in the same log is **critical**; a developer switching to `curl` stays
 **low**; a doc reader without a failed check is suppressed; one document unlocks
 one path; a redirect-heavy scan is caught without any 4xx; a search bot is not a

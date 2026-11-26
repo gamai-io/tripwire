@@ -467,12 +467,6 @@ def watch(log_path: str, registry: dict | None = None, window: int = 600,
     result["log_format"] = stats.get("format")
     result["empty"] = not rows
     result["now"] = now
-    if ledger and result.get("path_anomalies"):
-        append_receipt(ledger, {"v": 1, "type": "control", "action": "alert",
-                                "actor": "tripwire", "kind": "path_anomaly",
-                                "reason": "distributed scan across sources",
-                                "ts": time.time(), "log": log_path,
-                                "paths": result["path_anomalies"]})
     if exceptions:
         result = apply_exceptions(result, exceptions, now=now)
     if state_path:
@@ -480,6 +474,16 @@ def watch(log_path: str, registry: dict | None = None, window: int = 600,
     if ledger:
         order = {"low": 0, "medium": 1, "high": 2, "critical": 3}
         floor = order.get(min_level, 1)
+        # a distributed scan across many paths is a high-severity signal; it
+        # must obey the same level filter as session alerts (it used to ignore
+        # --min-level and write even at "critical")
+        if result.get("path_anomalies") and floor <= order["high"]:
+            append_receipt(ledger, {"v": 1, "type": "control", "action": "alert",
+                                    "actor": "tripwire", "kind": "path_anomaly",
+                                    "level": "high",
+                                    "reason": "distributed scan across sources",
+                                    "ts": time.time(), "log": log_path,
+                                    "paths": result["path_anomalies"]})
         alerts = {ip: s for ip, s in result["sessions"].items()
                   if order.get(s["level"], 0) >= floor
                   and (not state_path or s.get("is_new"))}

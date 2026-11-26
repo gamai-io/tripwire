@@ -119,6 +119,29 @@ class EndToEnd(unittest.TestCase):
             body = json.loads(open(ledger).read().strip().splitlines()[-1])["body"]
             self.assertEqual(body["kind"], "path_anomaly")
 
+    def test_a_path_anomaly_obeys_the_level_filter(self) -> None:
+        """It used to write to the ledger even at --min-level critical."""
+        with tempfile.TemporaryDirectory() as td:
+            log = os.path.join(td, "a.jsonl")
+            state = os.path.join(td, "baseline.json")
+            ledger = os.path.join(td, "alerts.jsonl")
+            for i in range(4):
+                rows = window(5, per_ip=4, status=200, start=BASE - 100 + i * 10)
+                with open(log, "w") as fh:
+                    for item in rows:
+                        fh.write(json.dumps(item) + "\n")
+                detect.watch(log, window=10 ** 9, baseline_path=state, baseline_floor=10)
+            rows = window(70, start=BASE)
+            with open(log, "w") as fh:
+                for item in rows:
+                    fh.write(json.dumps(item) + "\n")
+            detect.watch(log, window=10 ** 9, baseline_path=state,
+                         baseline_floor=10, ledger=ledger,
+                         min_level="critical")
+            self.assertFalse(os.path.exists(ledger),
+                             "a high-severity path anomaly was written at "
+                             "min-level critical")
+
 
 if __name__ == "__main__":
     unittest.main()
