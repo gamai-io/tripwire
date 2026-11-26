@@ -1,0 +1,9 @@
+[Unit]
+Description=Apply the tripwire deny list when it changes
+
+[Path]
+PathChanged=/var/lib/tripwire/deny.conf
+Unit=tripwire-apply.service
+
+[Install]
+WantedBy=paths.target

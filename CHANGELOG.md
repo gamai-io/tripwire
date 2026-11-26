@@ -1,5 +1,54 @@
 # Changelog
 
+## 0.8.7 — 2026-11-26
+Third adversarial review (RT3). The library was tested; the shipped CLI was not.
+
+- **The CLI now forwards `--min-level`, `--state`, `--state-ttl` and
+  `--exceptions`.** They were parsed and dropped, so the ledger filter, the
+  repeat suppression and the whitelist were dead on the only interface users
+  get. A medium alert was written at `--min-level high`, `--state` created no
+  file, and an excepted address was still denied. Tests now drive `cli.main`.
+- **`path_anomaly` obeys `--state` and `--exceptions`.** It repeated forever
+  (one ledger line per run) and ignored the window. It is remembered by path
+  template, sources on an active exception suppress it, and a window that trips
+  twice in a row is folded into the baseline so it cannot alert forever.
+- **Refusals are refusals.** `--deny-max` exceeded called `_emit(obj, None)` and
+  died with `TypeError`/exit 1; a deny path that could not be written raised a
+  traceback. Both are exit 4 with JSON now.
+- **A deny list on disk is untrusted input.** Previously written entries are
+  re-validated (private/loopback dropped) and re-emitted from validated fields,
+  so a JSON `ip` containing `\nallow all` can no longer inject nginx directives.
+  An active exception lifts a block that is already on disk.
+- **The shipped unit is now two units.** The unprivileged watch unit writes
+  `/var/lib/tripwire/deny.conf`; a root oneshot apply unit runs `nginx -t` and
+  restores the previous file if nginx rejects it. `SupplementaryGroups=adm`
+  makes the 0640 nginx log readable, and `nginx -s reload` no longer has to run
+  as an unprivileged user.
+- **A stale 401 no longer corroborates today's session.** `by_ip` is built from
+  the window, not the whole file.
+- **A future-dated row no longer blinds `--stream`.** Rows more than 60 s ahead
+  are counted and skipped; a file with rows but none inside the window is
+  "could not analyse" (exit 3), not "clean".
+- **Non-numeric `ts`/`status` no longer crash.** They are skipped/counted, not
+  raised inside the analyser.
+- Streaming prunes sessions that have left the window, so memory is bounded by
+  sources in the window; the doc numbers are corrected (146 MB / 2.46 s for
+  100k rows, 200 sources).
+- A missing explicit `--registry` is refused (exit 4) instead of silently
+  disabling canaries; `canary revoke/generate` refuse a corrupt registry instead
+  of overwriting it with an empty one.
+- `--reload-cmd` runs only when the list actually changed (it ran every minute
+  for as long as any block lived).
+- The sdist ships `packaging/`, `tools/`, `CLAIMS.md`, `CHANGELOG.md` and
+  `SECURITY.md`, which the README already told people to run.
+- `SECURITY.md` documents OIDC trusted publishing (the token section was stale)
+  and the supported-version table; the claims gate now checks `CLAIMS.md`, the
+  supported version and the corpus numbers, not only the README test count.
+- Docs corrected: per-family table (16 each, not 15/15/15/16/16), "80 attacks of
+  five families", identity-only deny evidence (the "two behaviours" path was
+  never implemented), exit-code table, `rows_in_window`/`invalid_rows`, and the
+  logrotate `copytruncate` warning.
+
 ## 0.8.6 — 2026-11-26
 - The sdist now carries `docs/` (it only shipped README, tests and the package),
   so the measured false-positive report travels with the release instead of

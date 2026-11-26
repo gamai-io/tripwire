@@ -117,9 +117,10 @@ tripwire watch --log access.jsonl --window 600 \
         --baseline /var/lib/tripwire/baseline.json --baseline-factor 3 --baseline-floor 10
 ```
 
-Anomalies are reported per **path**, not per address, and a window that trips the
-baseline is **not** folded into the history, so an attack cannot normalise itself.
-It needs a few clean runs first; a cold path is never an alarm.
+Anomalies are reported per **path**, not per address. A one-off window is **not**
+folded into the history; if it repeats for two consecutive windows it is folded in
+(0.2 EWMA), so a path cannot alert forever. It needs a few clean runs first; a
+cold path is never an alarm.
 
 **Not shouting every minute.** A cron that re-runs `watch` over the same file
 needs `--state`:
@@ -183,7 +184,7 @@ python3 tools/measure.py --corpus corpus
 | 360 benign sessions (adds a service that shares one **working** key across 4 egress addresses) | **0 flagged**, at any level |
 | 80 attack sessions (adds a key rotated across 8 addresses) | **64 high**, **80 medium or higher** |
 | **held-out corpus**, different seed (771122), same 360/80 split | **0 flagged**, **64 high**, **80 medium+** — identical to the tuning seed |
-| this server's nginx log: 4,048 requests, 238 sources | 5 flagged ≥ medium, **0 proven false positives**, 3 confirmed WordPress probing + a 770-path scanner that answers only 301 |
+| this server's nginx log (snapshot 2026-11-24): 4,048 requests, 238 sources | 5 flagged ≥ medium, **0 proven false positives**, 3 confirmed WordPress probing + a 770-path scanner that answers only 301 |
 | 100,000 requests from one address on one path, one key | **1.20 s** with gama-mandate 0.44+ (658 s before the fix, and zero findings) |
 
 Method, per-family tables and the four changes the measurement forced (including
@@ -193,13 +194,16 @@ commands reproduces every number.
 
 ## Files bigger than memory
 
-`--stream` keeps only the window instead of the whole file. Same verdicts, a
-fraction of the RAM; measured on 500,000 lines from 200 addresses:
+`--stream` keeps only the sources inside the window instead of the whole file.
+The same rules run; a correlation that spans two chunks can be lost (documented
+below). Measured on 2026-11-26, 100,000 rows / 200 sources inside a 600 s window:
 
 | mode | window | peak RSS | time |
 |---|---|---|---|
-| batch (default) | 600 s | **492 MB** | 11.9 s |
-| `--stream --chunk 200000` | 600 s | **34 MB** | 3.6 s |
+| `--stream --chunk 200000` | 600 s | **146 MB** | 2.46 s |
+
+Memory is bounded by **sources in the window** (roughly 1.5 KB each), not by the
+file: 500,000 distinct sources is the worst case because each is a live session.
 
 ```bash
 tripwire watch --log access.log --stream --window 600 --chunk 200000
@@ -207,20 +211,25 @@ tripwire watch --log access.log --stream --window 600 --chunk 200000
 
 `--chunk` rows are scored together and the findings are unioned per source, with
 points taking the maximum. A chunk boundary can lose a timing correlation between
-two rules; it cannot invent one. `rows_in_window` in the output tells you what the
-window actually held.
+two rules; it cannot invent one. `rows_in_window`, `invalid_rows` and
+`xff_ignored` in the output tell you what was actually scored.
 
 ## Run it every minute
 
 ```bash
-cp packaging/tripwire-watch.* /etc/systemd/system/
-systemctl enable --now tripwire-watch.timer
+install -m 0755 packaging/tripwire-apply-nginx.sh /usr/local/sbin/
+cp packaging/tripwire-watch.* packaging/tripwire-apply.* /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now tripwire-watch.timer tripwire-apply.path
 ```
 
-The window is the memory, so a timer gives tail-like coverage without a daemon.
-Exit codes are part of the contract: `0` clean, `1` findings, `3` **could not
-analyse** (missing or unparsable log), `4` **refused** (unreadable canary
-registry, deny cap hit). Deployment shape, ledger rotation, measured throughput
+The watch unit is unprivileged and writes the list to `/var/lib/tripwire`; the
+root oneshot apply unit tests the list with `nginx -t` and rolls back if it is
+bad. The window is the memory, so a timer gives tail-like coverage without a
+daemon. Exit codes are part of the contract: `0` nothing at or above
+`--min-level`, `1` findings, `3` **could not analyse** (missing/unparsable log, or
+every row outside the window/future-dated), `4` **refused** (explicit canary
+registry missing or unreadable, deny cap hit, deny list not writable). Deployment shape, ledger rotation, measured throughput
 and what is deliberately missing are in
 [`docs/OPERATIONS.md`](docs/OPERATIONS.md).
 
@@ -230,7 +239,7 @@ and what is deliberately missing are in
 python -m pytest -q tests/
 ```
 
-101 tests: the reported timeline scores **high** with all four decisive rules; a
+120 tests: the reported timeline scores **high** with all four decisive rules; a
 canary in the same log is **critical**; a developer switching to `curl` stays
 **low**; a doc reader without a failed check is suppressed; one document unlocks
 one path; a redirect-heavy scan is caught without any 4xx; a search bot is not a

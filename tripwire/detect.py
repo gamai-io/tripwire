@@ -141,7 +141,7 @@ def key_across_addresses(rows: list[dict], min_addresses: int = 3,
                                          "failures": 0, "requests": 0})
         item["requests"] += 1
         item["addresses"].add(str(row.get("ip") or "?"))
-        if int(row.get("status") or 0) in FAILED:
+        if _status(row.get("status")) in FAILED:
             item["failures"] += 1
     out = []
     for value, item in by_key.items():
@@ -154,8 +154,23 @@ def key_across_addresses(rows: list[dict], min_addresses: int = 3,
     return out
 
 
+def _status(value) -> int:
+    """A collector bug must not take the detector down with a ValueError."""
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return -1
+
+
+def _ts(value):
+    try:
+        return float(value or 0)
+    except (TypeError, ValueError):
+        return None
+
+
 def _failed_here(rows: list[dict]) -> bool:
-    return any(int(r.get("status") or 0) in FAILED for r in rows)
+    return any(_status(r.get("status")) in FAILED for r in rows)
 
 
 def _corroborate(session: dict, failure: bool, canary: bool) -> None:
@@ -178,12 +193,23 @@ def _corroborate(session: dict, failure: bool, canary: bool) -> None:
 def analyse(rows: list[dict], registry: dict | None = None, window: int = 600,
             now: float | None = None) -> dict:
     moment = time.time() if now is None else float(now)
+    valid, invalid = [], 0
+    for row in rows:
+        ts = _ts(row.get("ts"))
+        if ts is None:
+            invalid += 1
+            continue
+        clean = dict(row)
+        clean["ts"] = ts
+        clean["status"] = _status(row.get("status"))
+        valid.append(clean)
+    rows = valid
     in_window = [r for r in rows
                  if (window <= 0 or moment - float(r.get("ts") or 0) <= window)
                  and float(r.get("ts") or 0) <= moment + 300]
     base = agentwatch.analyse(in_window, window=window, now=moment)
     by_ip = defaultdict(list)
-    for row in rows:
+    for row in in_window:
         by_ip[str(row.get("ip") or "?")].append(row)
 
     canary_hits = []
@@ -279,11 +305,13 @@ def analyse(rows: list[dict], registry: dict | None = None, window: int = 600,
     for ip, items in by_ip.items():
         evidence[ip] = {
             "requests": len(items),
-            "failures": sum(1 for r in items if int(r.get("status") or 0) in FAILED),
+            "failures": sum(1 for r in items if _status(r.get("status")) in FAILED),
             "user_agents": len({str(r.get("ua") or "") for r in items}),
         }
 
     return {"window_s": window, "sources": base["sources"], "evidence": evidence,
+            "rows_in_window": len(in_window), "invalid_rows": invalid,
+            "xff_ignored": sum(1 for r in rows if r.get("xff_ignored")),
             "flagged": sum(1 for s in base["sessions"].values() if s["level"] != "low"),
             "canary_hits": canary_hits, "spec_derived_paths": spec_derived_paths(in_window),
             "auth_failure_streaks": auth_failure_streak(in_window),
@@ -314,10 +342,13 @@ def watch_stream(log_path: str, registry: dict | None = None, window: int = 600,
                  now: float | None = None, trusted: list | None = None,
                  chunk: int = 200_000, baseline_path: str = "",
                  baseline_factor: float = 3.0, baseline_floor: int = 10,
-                 baseline_update: bool = True) -> dict:
+                 baseline_update: bool = True,
+                 min_level: str = "medium", state_path: str = "",
+                 state_ttl: int = 3600, exceptions: list | None = None) -> dict:
     """Score a file too large to hold: keep only the window, merge per chunk.
 
-    Memory is bounded by (lines inside the window), not by the file. Findings are
+    Memory is bounded by (sources inside the window), not by the file: sessions
+    that have left the window and are not flagged are dropped. Findings are
     unioned per source and points take the maximum, so a chunk boundary can lose a
     timing correlation between two rules but never invents one.
     """
@@ -326,8 +357,9 @@ def watch_stream(log_path: str, registry: dict | None = None, window: int = 600,
     merged: dict[str, dict] = {}
     canary_hits: list[dict] = []
     anomalies: dict[str, dict] = {}
-    total = skipped = 0
+    total = skipped = future = 0
     latest = 0.0
+    wall = time.time()
     since_analysis = 0
     rows_seen: list[dict] = []
     stream_canaries: list[dict] = []
@@ -357,13 +389,26 @@ def watch_stream(log_path: str, registry: dict | None = None, window: int = 600,
             stream_canaries.append({"ip": row.get("ip"), "ts": row.get("ts"),
                                     "path": row.get("path"),
                                     "canary": hit.get("id")})
-        ts = float(row.get("ts") or 0)
+        ts = _ts(row.get("ts"))
+        if ts is None:
+            skipped += 1
+            continue
+        if ts > wall + 60:            # clock skew or a poisoned collector
+            future += 1
+            skipped += 1
+            continue
         latest = max(latest, ts)
         kept.append(row)
         since_analysis += 1
         cutoff = latest - window
         while kept and float(kept[0].get("ts") or 0) < cutoff:
             kept.popleft()
+        # bound memory by sources in the window, not by every source ever seen
+        if cutoff > 0:
+            for ip in [ip for ip, sess in merged.items()
+                       if sess.get("level") == "low"
+                       and float(sess.get("last_ts") or 0) < cutoff]:
+                del merged[ip]
         if since_analysis >= chunk:
             analyse_window()
             since_analysis = 0
@@ -387,7 +432,7 @@ def watch_stream(log_path: str, registry: dict | None = None, window: int = 600,
         session["level"] = "critical"
     rows = rows_seen if baseline_path else []
     result = {"window_s": window, "sources": len(merged), "rows": total,
-              "skipped_lines": skipped, "empty": total == 0,
+              "skipped_lines": skipped, "future_rows": future, "empty": total == 0,
               "stream": True, "chunk": chunk,
               "rows_in_window": len(kept),
               "canary_hits": canary_hits,
@@ -402,13 +447,17 @@ def watch_stream(log_path: str, registry: dict | None = None, window: int = 600,
     if baseline_path:
         _apply_baseline(result, rows, baseline_path, baseline_factor, baseline_floor,
                         baseline_update)
-    if ledger:
-        alerts = {ip: s for ip, s in merged.items() if s["level"] != "low"}
-        if alerts:
-            append_receipt(ledger, {"v": 1, "type": "control", "action": "alert",
-                                    "actor": "tripwire", "ts": time.time(),
-                                    "log": log_path, "stream": True,
-                                    "canary_hits": canary_hits, "findings": alerts})
+    if exceptions:
+        result = apply_exceptions(result, exceptions, now=now or time.time())
+    _drop_excepted_paths(result)
+    state = None
+    if state_path:
+        state = mark_state(result, state_path, ttl_s=state_ttl, now=now,
+                           min_level=min_level)
+    result["state_applied"] = bool(state_path)
+    _write_alert_records(result, ledger, log_path, min_level, extra={"stream": True})
+    if state is not None:
+        save_state(state_path, state)
     return result
 
 
@@ -438,14 +487,87 @@ def _apply_baseline(result: dict, rows: list[dict], path: str, factor: float,
         clean = [r for r in rows
                  if baseline_mod.template(str(r.get("path") or "/")) not in flagged]
         baseline_mod.update(clean, history)
+        # one anomalous window must not poison the history, but an event that
+        # repeats for two windows is the new normal: fold it in then, so the
+        # same path cannot alert forever.
+        paths = history.setdefault("paths", {})
+        for item in found:
+            entry = paths.get(item["path"])
+            if entry is None:
+                continue
+            entry["strikes"] = int(entry.get("strikes") or 0) + 1
+            if entry["strikes"] >= 2:
+                entry["requests"] = round(0.8 * float(entry.get("requests") or 0)
+                                          + 0.2 * item["requests"], 3)
+                entry["ips"] = round(0.8 * float(entry.get("ips") or 0)
+                                     + 0.2 * item["ips"], 3)
+        for key, entry in paths.items():
+            if key not in flagged and "strikes" in entry:
+                entry.pop("strikes", None)
         baseline_mod.save(path, history)
+
+
+def _drop_excepted_paths(result: dict) -> None:
+    """A path anomaly whose every source is on an active exception is ours."""
+    if not result.get("exceptions_active"):
+        return
+    excepted = {ip for ip, session in result.get("sessions", {}).items()
+                if session.get("exception")}
+    kept = []
+    for item in result.get("path_anomalies") or []:
+        sources = item.get("sources") or []
+        if (sources and not item.get("sources_truncated")
+                and set(sources) <= excepted):
+            continue
+        kept.append(item)
+    result["path_anomalies"] = kept
+
+
+def _write_alert_records(result: dict, ledger: str | None, log_path: str,
+                         min_level: str, extra: dict | None = None) -> list[str]:
+    """Append only what the operator asked to see, at the requested floor.
+
+    Path anomalies and session alerts share one floor; with `--state`, both are
+    written only when they are new or worse.
+    """
+    if not ledger:
+        return []
+    order = {"low": 0, "medium": 1, "high": 2, "critical": 3}
+    floor = order.get(min_level, 1)
+    wrote = []
+    new_paths = [item for item in result.get("path_anomalies") or []
+                 if item.get("is_new", True)
+                 and order.get(item.get("level", "high"), 2) >= floor]
+    if new_paths:
+        level = max((item.get("level", "high") for item in new_paths),
+                    key=lambda name: order.get(name, 0))
+        append_receipt(ledger, dict({
+            "v": 1, "type": "control", "action": "alert", "actor": "tripwire",
+            "kind": "path_anomaly", "level": level, "min_level": min_level,
+            "reason": "distributed scan across sources",
+            "ts": time.time(), "log": log_path,
+            "paths": new_paths}, **(extra or {})))
+        wrote.append("path_anomaly")
+    state_applied = bool(result.get("state_applied"))
+    alerts = {ip: session for ip, session in result["sessions"].items()
+              if order.get(session["level"], 0) >= floor
+              and (not state_applied or session.get("is_new"))}
+    if alerts:
+        append_receipt(ledger, dict({
+            "v": 1, "type": "control", "action": "alert", "actor": "tripwire",
+            "reason": "inbound agent behaviour", "min_level": min_level,
+            "ts": time.time(), "log": log_path,
+            "canary_hits": result["canary_hits"],
+            "findings": alerts}, **(extra or {})))
+        wrote.append("session")
+    return wrote
 
 
 def watch(log_path: str, registry: dict | None = None, window: int = 600,
           ledger: str | None = None, fmt: str = "auto",
           now: float | None = None, trusted: list | None = None,
           min_level: str = "medium", state_path: str = "",
-          exceptions: list | None = None,
+          state_ttl: int = 3600, exceptions: list | None = None,
           baseline_path: str = "", baseline_factor: float = 3.0,
           baseline_floor: int = 10, baseline_update: bool = True) -> dict:
     """Score a file.
@@ -459,42 +581,28 @@ def watch(log_path: str, registry: dict | None = None, window: int = 600,
         # a single future-dated line must not blind the whole run
         now = min(max(float(r.get("ts") or 0) for r in rows) + 1, time.time() + 60)
     result = analyse(rows, registry, window, now=now)
-    _apply_baseline(result, rows, baseline_path, baseline_factor, baseline_floor,
-                    baseline_update)
+    in_window = [r for r in rows
+                 if (window <= 0 or now - float(r.get("ts") or 0) <= window)
+                 and float(r.get("ts") or 0) <= now + 300]
+    _apply_baseline(result, in_window, baseline_path, baseline_factor,
+                    baseline_floor, baseline_update)
 
     result["rows"] = len(rows)
-    result["skipped_lines"] = stats.get("skipped", 0)
+    result["skipped_lines"] = stats.get("skipped", 0) + result.get("invalid_rows", 0)
     result["log_format"] = stats.get("format")
     result["empty"] = not rows
     result["now"] = now
     if exceptions:
         result = apply_exceptions(result, exceptions, now=now)
+    _drop_excepted_paths(result)
+    state = None
     if state_path:
-        result = apply_state(result, state_path)
-    if ledger:
-        order = {"low": 0, "medium": 1, "high": 2, "critical": 3}
-        floor = order.get(min_level, 1)
-        # a distributed scan across many paths is a high-severity signal; it
-        # must obey the same level filter as session alerts (it used to ignore
-        # --min-level and write even at "critical")
-        if result.get("path_anomalies") and floor <= order["high"]:
-            append_receipt(ledger, {"v": 1, "type": "control", "action": "alert",
-                                    "actor": "tripwire", "kind": "path_anomaly",
-                                    "level": "high",
-                                    "reason": "distributed scan across sources",
-                                    "ts": time.time(), "log": log_path,
-                                    "paths": result["path_anomalies"]})
-        alerts = {ip: s for ip, s in result["sessions"].items()
-                  if order.get(s["level"], 0) >= floor
-                  and (not state_path or s.get("is_new"))}
-        if alerts:
-            append_receipt(ledger, {"v": 1, "type": "control", "action": "alert",
-                                    "actor": "tripwire",
-                                    "reason": "inbound agent behaviour",
-                                    "min_level": min_level,
-                                    "ts": time.time(), "log": log_path,
-                                    "canary_hits": result["canary_hits"],
-                                    "findings": alerts})
+        state = mark_state(result, state_path, ttl_s=state_ttl, now=now,
+                           min_level=min_level)
+    result["state_applied"] = bool(state_path)
+    _write_alert_records(result, ledger, log_path, min_level)
+    if state is not None:
+        save_state(state_path, state)
     return result
 
 
@@ -559,8 +667,11 @@ def deny_evidence(session: dict, evidence: dict | None) -> tuple[bool, str]:
 
     Volume rules (`velocity`, `wide_probe`, `low_and_slow_scan`) fire on shared
     egress — a CDN, a corporate NAT, a hospital with one line — so they can alert
-    but not deny. Denial needs identity evidence (canary, probed or rejected
-    credentials), two independent behaviours, or one behaviour plus real failures.
+    but not deny. Denial needs identity evidence: a canary, a probed key, or
+    rejected credentials. Behaviour-only and volume-only findings never deny.
+
+    `evidence` is kept for callers that pass it, but the decision does not use it:
+    volume is exactly what a shared NAT produces.
     """
     rules = {f["rule"] for f in session.get("findings") or [] if not f.get("suppressed")}
     if "canary_used" in rules:
@@ -575,6 +686,79 @@ def deny_evidence(session: dict, evidence: dict | None) -> tuple[bool, str]:
     return False, "volume evidence only (%s)" % (",".join(sorted(rules)) or "none")
 
 
+def mark_state(result: dict, state_path: str, ttl_s: int = 3600,
+               now: float | None = None, min_level: str = "medium") -> dict:
+    """Mark what is new or worse since the last run, without writing the file.
+
+    Sessions and path anomalies are both remembered; the caller appends the
+    ledger records first and saves the state after, so a failed ledger write
+    cannot silently suppress the alert forever.
+    """
+    moment = time.time() if now is None else now
+    state = {"version": 1, "alerts": {}, "paths": {}}
+    if os.path.exists(state_path):
+        try:
+            loaded = json.load(open(state_path, encoding="utf-8"))
+            if isinstance(loaded, dict):
+                state.update(loaded)
+        except ValueError:
+            pass
+    alerts = state.setdefault("alerts", {})
+    paths = state.setdefault("paths", {})
+    order = {"low": 0, "medium": 1, "high": 2, "critical": 3}
+    new_sessions = 0
+    floor = order.get(min_level, 1)
+    for ip, session in result["sessions"].items():
+        if order.get(session["level"], 0) < floor:
+            continue
+        previous = alerts.get(ip)
+        expired = not previous or float(previous.get("expires") or 0) <= moment
+        worse = bool(previous) and order.get(session["level"], 0) > order.get(
+            previous.get("level"), 0)
+        session["is_new"] = bool(expired or worse)
+        if session["is_new"]:
+            new_sessions += 1
+        else:
+            session["repeat"] = True
+        alerts[ip] = {"level": session["level"], "points": session["points"],
+                      "first_seen": (previous or {}).get("first_seen", int(moment)),
+                      "expires": int(moment + ttl_s)}
+    new_paths = 0
+    for item in result.get("path_anomalies") or []:
+        key = str(item.get("path") or "?")
+        previous = paths.get(key)
+        expired = not previous or float(previous.get("expires") or 0) <= moment
+        worse = bool(previous) and order.get(item.get("level", "high"), 2) > order.get(
+            previous.get("level"), 2)
+        item["is_new"] = bool(expired or worse)
+        if item["is_new"]:
+            new_paths += 1
+        else:
+            item["repeat"] = True
+        paths[key] = {"level": item.get("level", "high"),
+                      "first_seen": (previous or {}).get("first_seen", int(moment)),
+                      "expires": int(moment + ttl_s)}
+    state["alerts"] = {ip: item for ip, item in alerts.items()
+                       if float(item.get("expires") or 0) > moment}
+    state["paths"] = {key: item for key, item in paths.items()
+                      if float(item.get("expires") or 0) > moment}
+    result["new_alerts"] = new_sessions + new_paths
+    result["new_path_anomalies"] = [item["path"] for item in
+                                    result.get("path_anomalies") or []
+                                    if item.get("is_new")]
+    return state
+
+
+def save_state(state_path: str, state: dict) -> None:
+    directory = os.path.dirname(os.path.abspath(state_path))
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+    handle, tmp = tempfile.mkstemp(dir=directory or ".", prefix=".state-")
+    with os.fdopen(handle, "w", encoding="utf-8") as fh:
+        json.dump(state, fh, indent=1, sort_keys=True)
+    os.replace(tmp, state_path)
+
+
 def apply_state(result: dict, state_path: str, ttl_s: int = 3600,
                 now: float | None = None) -> dict:
     """Return only what is new or worse since the last run, and remember it.
@@ -583,43 +767,9 @@ def apply_state(result: dict, state_path: str, ttl_s: int = 3600,
     until the window rolls over. State is a small JSON file; it is pruned on every
     write, so it cannot grow without bound.
     """
-    moment = time.time() if now is None else now
-    state = {"version": 1, "alerts": {}}
-    if os.path.exists(state_path):
-        try:
-            state = json.load(open(state_path, encoding="utf-8"))
-        except ValueError:
-            state = {"version": 1, "alerts": {}}
-    alerts = state.setdefault("alerts", {})
-    order = {"low": 0, "medium": 1, "high": 2, "critical": 3}
-    new = 0
-    for ip, session in result["sessions"].items():
-        if session["level"] == "low":
-            continue
-        previous = alerts.get(ip)
-        expired = not previous or float(previous.get("expires") or 0) <= moment
-        worse = previous and order.get(session["level"], 0) > order.get(
-            previous.get("level"), 0)
-        if expired or worse:
-            new += 1
-            session["is_new"] = True
-        else:
-            session["is_new"] = False
-            session["repeat"] = True
-        alerts[ip] = {"level": session["level"], "points": session["points"],
-                      "first_seen": (previous or {}).get("first_seen", int(moment)),
-                      "expires": int(moment + ttl_s)}
-    alerts = {ip: item for ip, item in alerts.items()
-              if float(item.get("expires") or 0) > moment}
-    state["alerts"] = alerts
-    directory = os.path.dirname(os.path.abspath(state_path))
-    if directory:
-        os.makedirs(directory, exist_ok=True)
-    handle, tmp = tempfile.mkstemp(dir=directory or ".", prefix=".state-")
-    with os.fdopen(handle, "w", encoding="utf-8") as fh:
-        json.dump(state, fh, indent=1, sort_keys=True)
-    os.replace(tmp, state_path)
-    result["new_alerts"] = new
+    state = mark_state(result, state_path, ttl_s=ttl_s, now=now)
+    save_state(state_path, state)
+    result["state_applied"] = True
     return result
 
 
@@ -684,15 +834,20 @@ def apply_exceptions(result: dict, exceptions: list[dict],
         if item:
             session["exception"] = {"until": item["until"],
                                     "approver": item["approver"],
-                                    "reason": item["reason"]}
+                                    "reason": item.get("reason", "")}
     result["exceptions_active"] = len(active)
     return result
+
+
+def _clean(text, limit: int = 120) -> str:
+    """Anything we write into a config file is data, not config."""
+    return re.sub(r"[\r\n\t]+", " ", str(text or ""))[:limit]
 
 
 def deny_list(result: dict, min_level: str = "medium", now: float | None = None,
               ttl_s: int = 3600, ignore: set[str] | None = None,
               allow_volume: bool = False, previous: dict | None = None,
-              cap: int = 1000) -> dict:
+              cap: int = 1000, exceptions: list | None = None) -> dict:
     """Turn findings into an edge block list (nginx `deny` lines + JSON entries).
 
     The list is meant to be rewritten on a timer: every entry carries the epoch
@@ -726,10 +881,31 @@ def deny_list(result: dict, min_level: str = "medium", now: float | None = None,
                         "reason": why, "expires": int(moment + ttl_s),
                         "rules": sorted({f["rule"] for f in session["findings"]
                                          if not f.get("suppressed")})})
-    # keep what an earlier run blocked and has not expired: a quiet minute must
-    # not lift a block that is still meant to stand
-    merged = {ip: item for ip, item in (previous or {}).items()
-              if float(item.get("expires") or 0) > moment}
+    # an active exception or an ignore entry must lift a block that is already
+    # on disk, not only prevent a new one
+    active_excepted = {str(item.get("ip")) for item in (exceptions or [])
+                       if float(item.get("until") or 0) > moment}
+    active_excepted |= set(ignore)
+    active_excepted |= {ip for ip, session in result["sessions"].items()
+                        if session.get("exception")}
+    # keep what an earlier run blocked and has not expired, but re-validate it:
+    # a file on disk is untrusted input, not a list to trust
+    merged = {}
+    for ip, item in (previous or {}).items():
+        if ip in active_excepted or not _blockable(ip):
+            continue
+        try:
+            expires = int(item.get("expires") or 0)
+        except (TypeError, ValueError):
+            continue
+        if expires <= moment:
+            continue
+        merged[ip] = {"ip": ip, "level": _clean(item.get("level"), 10) or "medium",
+                      "points": int(item.get("points") or 0),
+                      "expires": expires,
+                      "rules": sorted({_clean(r, 40) for r in (item.get("rules") or [])
+                                       if _clean(r, 40)}),
+                      "reason": _clean(item.get("reason"))}
     order_levels = {"low": 0, "medium": 1, "high": 2, "critical": 3}
     for entry in entries:
         old = merged.get(entry["ip"])
@@ -748,7 +924,7 @@ def deny_list(result: dict, min_level: str = "medium", now: float | None = None,
     for entry in merged.values():
         lines.append("# %s %s points=%d expires=%d rules=%s reason=%s"
                      % (entry["ip"], entry["level"], entry["points"], entry["expires"],
-                        ",".join(entry["rules"]), entry.get("reason", "")))
+                        ",".join(entry["rules"]), _clean(entry.get("reason"))))
         lines.append("deny %s;" % entry["ip"])
     for item in skipped:
         lines.append("# skipped %s (%s)" % (item["ip"], item["why"]))
@@ -781,17 +957,29 @@ def write_deny_files(result: dict, map_path: str | None, json_path: str | None,
     out = deny_list(result, previous=previous, **kwargs)
     if out.get("error"):
         return out
-    for path, payload in ((map_path, out["nginx"]), (json_path, None)):
-        if not path:
-            continue
-        directory = os.path.dirname(os.path.abspath(path))
-        if directory:
-            os.makedirs(directory, exist_ok=True)
-        handle, tmp = tempfile.mkstemp(dir=directory or ".", prefix=".deny-")
-        with os.fdopen(handle, "w", encoding="utf-8") as fh:
-            if payload is None:
-                json.dump(out["json"], fh, indent=1, sort_keys=True)
-            else:
-                fh.write(payload)
-        os.replace(tmp, path)
+    old = ""
+    if map_path and os.path.exists(map_path):
+        try:
+            old = open(map_path, encoding="utf-8").read()
+        except OSError:
+            old = ""
+    out["changed"] = old != out["nginx"]
+    try:
+        for path, payload in ((map_path, out["nginx"]), (json_path, None)):
+            if not path:
+                continue
+            directory = os.path.dirname(os.path.abspath(path))
+            if directory:
+                os.makedirs(directory, exist_ok=True)
+            handle, tmp = tempfile.mkstemp(dir=directory or ".", prefix=".deny-")
+            with os.fdopen(handle, "w", encoding="utf-8") as fh:
+                if payload is None:
+                    json.dump(out["json"], fh, indent=1, sort_keys=True)
+                else:
+                    fh.write(payload)
+            os.replace(tmp, path)
+    except OSError as exc:
+        return {"error": "deny list write failed: %s" % exc, "entries": [],
+                "count": 0, "skipped": out.get("skipped") or [],
+                "nginx": "", "json": {}, "changed": False}
     return out

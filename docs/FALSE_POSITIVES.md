@@ -26,9 +26,9 @@ that contains the whole session, so the result does not depend on when it runs.
 
 | family | sessions | what it does |
 |---|---|---|
-| `incident` | 15 | the reported sequence: 403, fake phone UA, decoy doc, path from the doc, 3 keys in 4 s |
-| `key_prober` | 15 | 20 keys against one endpoint, 300 ms apart |
-| `slow_scanner` | 15 | 30 new paths, one 404 each, 10–20 s apart |
+| `incident` | 16 | the reported sequence: 403, fake phone UA, decoy doc, path from the doc, 3 keys in 4 s |
+| `key_prober` | 16 | 20 keys against one endpoint, 300 ms apart |
+| `slow_scanner` | 16 | 30 new paths, one 404 each, 10–20 s apart |
 | `docs_crawler` | 16 | spec, then 10 new endpoints with 401 |
 | `key_rotator` | 16 | the same stolen key from 8 addresses, 40 rejected requests |
 
@@ -124,10 +124,11 @@ per-entry expiry. Before writing, each address is checked with
   alerts and is reported as `behaviour only`, and is not blocked.
 - **volume rules never deny.** `velocity`, `wide_probe`, `path_burst` and
   `low_and_slow_scan` fire on shared egress — a CDN, a corporate NAT, a hospital
-  with one line. Denial needs a canary, probed or rejected credentials, two
-  independent behaviours, or one behaviour plus five failures; otherwise the
-  address is alerted and reported as `volume evidence only`. `--deny-unsafe`
-  overrides, deliberately named;
+  with one line. Denial needs identity evidence: a canary, a probed key, or
+  rejected credentials (`key_probing`, `auth_failure_streak`,
+  `key_across_addresses`). Behaviour-only and volume-only findings alert and are
+  reported as `behaviour only` / `volume evidence only`; they are never denied.
+  `--deny-unsafe` overrides, deliberately named;
 - the list is meant to be rewritten on a timer — expiry is in the file, so a cron
   both adds and removes entries.
 
@@ -137,8 +138,10 @@ Per-address rules are blind to two requests per address from a thousand addresse
 `path_baseline_anomaly` compares the distinct-source count on a path template
 (`/api/v1/invoices/8812` → `/api/v1/invoices/{}`) with an EWMA of its own history.
 
-- 4 clean windows of 5 sources, then 70 sources on one path → **1 anomaly**, and
-  the anomalous window is **not** folded into the history (`tests/test_baseline.py`).
+- 4 clean windows of 5 sources, then 70 sources on one path → **1 anomaly**; a
+  one-off window is **not** folded into the history, but if it repeats for two
+  consecutive windows it is folded in (0.2 EWMA) so a single path cannot alert
+  forever (`tests/test_baseline.py`).
 - it reports the path, not the addresses: blaming individual addresses on a shared
   endpoint is how a detector blocks a CDN.
 - it needs warm-up; a path seen for the first time is never an anomaly, and the
@@ -152,7 +155,7 @@ Per-address rules are blind to two requests per address from a thousand addresse
 - `combined` logs carry no credential value, so `key_probing` and
   `auth_failure_streak` can only fire on the JSONL schema (which includes
   `auth`). On a combined log you get behaviour, not credential attempts.
-- Recall is measured on 60 attacks of four families. A patient attacker who
+- Recall is measured on 80 attacks of five families. A patient attacker who
   reads the spec, uses a valid key and never fails an auth check looks like a
   developer **by construction**; the detector will not separate them. That is a
   documented limit, not a bug to be papered over.

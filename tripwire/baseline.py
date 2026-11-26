@@ -54,7 +54,9 @@ def _counts(rows: list[dict]) -> dict[str, dict]:
         item = out.setdefault(key, {"requests": 0, "ips": set()})
         item["requests"] += 1
         item["ips"].add(str(row.get("ip") or "?"))
-    return {k: {"requests": v["requests"], "ips": len(v["ips"])} for k, v in out.items()}
+    return {k: {"requests": v["requests"], "ips": len(v["ips"]),
+                "sources": sorted(v["ips"])[:25]}
+            for k, v in out.items()}
 
 
 def update(rows: list[dict], baseline: dict, alpha: float = 0.2) -> dict:
@@ -98,6 +100,10 @@ def anomalies(rows: list[dict], baseline: dict, factor: float = 3.0,
             found.append({"path": key, "ips": item["ips"], "requests": item["requests"],
                           "baseline_ips": round(expected, 2),
                           "factor": round(ratio, 2),
+                          # a 5x jump is a different operational event from a 3x one
+                          "level": "high" if ratio >= max(5.0, factor * 1.5) else "medium",
+                          "sources": item["sources"],
+                          "sources_truncated": item["ips"] > len(item["sources"]),
                           "detail": "%d sources on %s, %.1fx its baseline of %.1f"
                                     % (item["ips"], key, ratio, expected)})
     return found

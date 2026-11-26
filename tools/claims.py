@@ -76,6 +76,15 @@ def measured_rows() -> list[str]:
 
 def check() -> list[str]:
     current, problems = version(), []
+    if os.path.exists(os.path.join(ROOT, "SECURITY.md")):
+        security = open(os.path.join(ROOT, "SECURITY.md"), encoding="utf-8").read()
+        line = ".".join(current.split(".")[:2]) + ".x"
+        row = re.search(r"\|\s*([0-9]+\.[0-9]+\.x)\s*\|\s*yes\s*\|", security)
+        if not row:
+            problems.append("SECURITY.md has no supported-version table")
+        elif row.group(1) != line:
+            problems.append("SECURITY.md supports %s, pyproject is %s"
+                            % (row.group(1), current))
     if module_version() != current:
         problems.append("tripwire.__version__ %s != pyproject %s"
                         % (module_version(), current))
@@ -93,6 +102,40 @@ def check() -> list[str]:
         if int(match.group("n")) != _passed():
             problems.append("README claims %s tests, suite has %d passing"
                             % (match.group("n"), _passed()))
+    # CLAIMS.md is the evidence index; a stale number there lies with authority
+    claims_path = os.path.join(ROOT, "CLAIMS.md")
+    if os.path.exists(claims_path):
+        claims = open(claims_path, encoding="utf-8").read()
+        version_row = re.search(r"\| version \| ([0-9.]+) \|", claims)
+        if version_row and version_row.group(1) != current:
+            problems.append("CLAIMS.md says version %s, pyproject is %s"
+                            % (version_row.group(1), current))
+        for label, actual in (("tests collected", count_tests()),
+                              ("tests passing", _passed())):
+            row = re.search(r"\| %s \| (\d+) \|" % re.escape(label), claims)
+            if row and int(row.group(1)) != actual:
+                problems.append("CLAIMS.md says %s %s, suite has %d"
+                                % (label, row.group(1), actual))
+        measured = _measure()
+        if measured:
+            for label, pattern, expected in (
+                    ("benign sessions flagged",
+                     r"\| benign sessions flagged \| (\d+) / (\d+) \|",
+                     (measured["benign_medium_or_higher"], measured["benign_sessions"])),
+                    ("attacks at high",
+                     r"\| attacks at high \| (\d+) / (\d+) \|",
+                     (measured["attack_detected_high"], measured["attack_sessions"])),
+                    ("attacks at medium+",
+                     r"\| attacks at medium\+ \| (\d+) / (\d+) \|",
+                     (measured["attack_detected_any"], measured["attack_sessions"]))):
+                row = re.search(pattern, claims)
+                if not row:
+                    problems.append("CLAIMS.md has no '%s' row" % label)
+                    continue
+                got = (int(row.group(1)), int(row.group(2)))
+                if got != expected:
+                    problems.append("CLAIMS.md says %s %s, corpus measured %s"
+                                    % (label, got, expected))
     return problems
 
 

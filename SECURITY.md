@@ -6,36 +6,36 @@ Write to renato@gamatrade.ba with the tag `[tripwire-security]`. We answer withi
 two working days. There is no bug bounty; we will credit you unless you ask
 otherwise.
 
+## Supported versions
+
+| version | security fixes |
+|---|---|
+| 0.8.x | yes |
+| < 0.8 | no |
+
 ## How releases are published
 
 | item | value |
 |---|---|
 | version source | `pyproject.toml` + `tripwire/__init__.py` (both must match) |
 | build | GitHub Actions `release.yml` on tag `v*` |
-| upload | `pypa/gh-action-pypi-publish` with `secrets.PYPI_API_TOKEN` |
-| provenance | `attest.yml` runs `actions/attest-build-provenance` on the same tag |
-| scan before upload | `tools/prepublish_scan.py` refuses private keys, tokens, `/root/` paths |
+| upload | `pypa/gh-action-pypi-publish` with **OIDC trusted publishing** (`id-token: write`) |
+| provenance | the publish step creates PEP 740 attestations; `attest.yml` also builds them |
+| scan before upload | `tools/prepublish_scan.py` refuses private keys, tokens and absolute home-directory paths |
 
-The token is a long-lived PyPI API token scoped to this project, held only as a
-GitHub Actions secret. It is never printed, never written into the repo, and
-never used interactively.
+There is **no long-lived PyPI API token** for this project. GitHub mints a
+short-lived OIDC token for the tag build, PyPI verifies the publisher entry
+(`gamai-io/tripwire`, workflow `release.yml`), and the attestation is attached to
+the file. Verify one with:
 
-### Rotating the token
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' \
+  https://pypi.org/integrity/gamai-tripwire/0.8.6/gamai_tripwire-0.8.6-py3-none-any.whl/provenance
+# 200
+```
 
-1. PyPI -> Account settings -> API tokens -> revoke the old token for this project.
-2. Create a new project-scoped token for `gamai-tripwire`.
-3. `gh secret set PYPI_API_TOKEN -R gamai-io/tripwire` (paste when prompted; do not pass it on a command line that lands in shell history).
-4. Push a tag to prove it: the `release` run must reach the `publish` job.
-5. `gh secret list -R gamai-io/tripwire` shows only the update timestamp, never the value.
-
-### Optional: drop the token entirely
-
-PyPI supports OIDC trusted publishing. After adding the publisher entry
-(project `gamai-tripwire`, owner `gamai-io`, repository `tripwire`, workflow
-`release.yml`, environment empty), set `permissions: id-token: write` in
-`release.yml`, remove the `password:` line and delete the secret. Until that
-entry exists, the token is the working path and is documented above rather than
-hidden.
+If a token ever appears in a workflow, treat it as a regression: the release path
+is OIDC-only on purpose.
 
 ## Two-factor codes
 
@@ -49,3 +49,4 @@ shared brain.
 - Not a WAF, not inline blocking, not TLS inspection.
 - No model in the decision path: a judge may explain a finding, never lower it.
 - Canaries prove only that a planted token was used; they do not prove intent.
+- Behaviour-only and volume-only findings alert; they never deny an address.

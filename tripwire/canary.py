@@ -41,7 +41,10 @@ def load(path: str = "canaries.json", strict: bool = False) -> dict:
         return {"version": 1, "canaries": []}
     try:
         with open(path, encoding="utf-8") as fh:
-            data = json.load(fh)
+            raw = fh.read()
+        if not raw.strip():
+            return {"version": 1, "canaries": []}   # a freshly created file
+        data = json.loads(raw)
     except ValueError as exc:
         if strict:
             raise RegistryError("%s is not valid JSON: %s" % (path, exc)) from exc
@@ -101,7 +104,8 @@ def generate(count: int = 3, note: str = "", path: str = "canaries.json",
              registry: dict | None = None, plant_dir: str = "",
              plant_name: str = "api.md") -> dict:
     """Add `count` canaries to the registry and return the plaintext tokens once."""
-    data = registry if registry is not None else load(path)
+    # never start from a corrupt registry: that would erase every existing canary
+    data = registry if registry is not None else load(path, strict=True)
     items = list(data.get("canaries") or [])
     tokens = []
     for _ in range(max(1, int(count))):
@@ -151,7 +155,7 @@ def candidates(text: str) -> list[str]:
 
 
 def revoke(canary_id: str, path: str = "canaries.json") -> dict:
-    data = load(path)
+    data = load(path, strict=True)
     found = 0
     for entry in data.get("canaries") or []:
         if entry.get("id") == canary_id:

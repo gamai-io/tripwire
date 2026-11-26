@@ -1,4 +1,4 @@
 """Tripwire — detect an inbound agent by behaviour."""
-__version__ = "0.8.6"
+__version__ = "0.8.7"
 from .canary import generate, load, match, revoke  # noqa: F401
 from .detect import analyse  # noqa: F401

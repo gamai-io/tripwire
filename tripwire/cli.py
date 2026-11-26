@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 
@@ -85,8 +86,12 @@ def main(argv=None) -> int:
 
     if a.cmd == "canary":
         if a.action == "generate":
-            res = canary.generate(a.count, a.note, a.registry,
-                                  plant_dir=a.plant_dir)
+            try:
+                res = canary.generate(a.count, a.note, a.registry,
+                                      plant_dir=a.plant_dir)
+            except canary.RegistryError as exc:
+                _emit({"error": "RegistryError", "message": str(exc)})
+                return 4
             _emit({"registry": res["path"], "count": res["count"],
                    "tokens": res["tokens"], "planted": res.get("planted") or [],
                    "note": "shown once: only sha256 is stored, revoke by id"})
@@ -100,10 +105,20 @@ def main(argv=None) -> int:
         if not a.id:
             _emit({"error": "usage", "message": "canary revoke --id ID"})
             return 2
-        _emit(canary.revoke(a.id, a.registry))
+        try:
+            _emit(canary.revoke(a.id, a.registry))
+        except canary.RegistryError as exc:
+            _emit({"error": "RegistryError", "message": str(exc)})
+            return 4
         return 0
 
     if a.cmd == "watch":
+        if a.registry and not os.path.exists(a.registry):
+            # an explicit registry that is missing turns off the strongest rule
+            _emit({"error": "RegistryMissing",
+                   "message": "refusing to run: --registry %s does not exist"
+                              % a.registry})
+            return 4
         try:
             registry = canary.load(a.registry, strict=True) if a.registry else {"canaries": []}
         except canary.RegistryError as exc:
@@ -120,8 +135,11 @@ def main(argv=None) -> int:
             except ValueError:
                 _emit({"error": "Usage", "message": "--now takes 'file', 'wall' or an epoch"})
                 return 2
+        exceptions = detect.load_exceptions(a.exceptions)
         common = dict(window=a.window, ledger=a.ledger, fmt=a.format, now=now,
                       trusted=a.trusted_proxy,
+                      min_level=a.min_level, state_path=a.state or "",
+                      state_ttl=a.state_ttl, exceptions=exceptions,
                       baseline_path=a.baseline or "",
                       baseline_factor=a.baseline_factor,
                       baseline_floor=a.baseline_floor,
@@ -131,7 +149,7 @@ def main(argv=None) -> int:
                 res = detect.watch_stream(a.log, registry, chunk=a.chunk, **common)
             else:
                 res = detect.watch(a.log, registry, **common)
-        except OSError as exc:
+        except (OSError, ValueError) as exc:
             _emit({"error": "Unreadable", "message": str(exc)})
             return 3
         if res.get("empty"):
@@ -141,29 +159,48 @@ def main(argv=None) -> int:
                    "message": "the file has no parsable lines for format %r"
                               % res.get("log_format")})
             return 3
+        if (res.get("rows") or 0) > 0 and not res.get("sessions"):
+            # the file was read, nothing landed inside the window: that is not
+            # "clean", it is "could not analyse" (future timestamps, bad clock)
+            _emit({"sources": 0, "flagged": 0, "rows": res.get("rows"),
+                   "rows_in_window": res.get("rows_in_window", 0),
+                   "skipped_lines": res.get("skipped_lines", 0),
+                   "error": "no rows in window",
+                   "message": "every row was outside the window or future-dated; "
+                              "check the clock or --now"})
+            return 3
         order = {"low": 0, "medium": 1, "high": 2, "critical": 3}
         floor = order[a.min_level]
         flagged = {ip: s for ip, s in res["sessions"].items()
                    if order.get(s["level"], 0) >= floor}
-        deny = detect.write_deny_files(res, a.deny_map, a.deny_json,
-                                       min_level=a.min_level, ttl_s=a.deny_ttl,
-                                       ignore=set(a.ignore or ()),
-                                       allow_volume=a.deny_unsafe, cap=a.deny_max)
+        try:
+            deny = detect.write_deny_files(res, a.deny_map, a.deny_json,
+                                           min_level=a.min_level, ttl_s=a.deny_ttl,
+                                           ignore=set(a.ignore or ()),
+                                           allow_volume=a.deny_unsafe, cap=a.deny_max,
+                                           exceptions=exceptions)
+        except (OSError, ValueError) as exc:
+            deny = {"error": "deny list write failed: %s" % exc, "count": 0,
+                    "skipped": [], "changed": False}
         if deny.get("error"):
             _emit({"error": "DenyRefused", "message": deny["error"],
-                   "sessions": flagged}, None)
+                   "sessions": flagged})
             return 4
         reload_status = None
-        if a.reload_cmd and deny["count"]:
+        if a.reload_cmd and deny.get("changed"):
             done = subprocess.run(a.reload_cmd, shell=True, capture_output=True, text=True)
             reload_status = {"command": a.reload_cmd, "exit": done.returncode,
                              "stderr": done.stderr.strip()[:200]}
         _emit({"sources": res["sources"], "rows": res.get("rows"),
+               "rows_in_window": res.get("rows_in_window"),
                "skipped_lines": res.get("skipped_lines", 0),
+               "invalid_rows": res.get("invalid_rows", 0),
+               "xff_ignored": res.get("xff_ignored", 0),
                "flagged": len(flagged),
                "canary_hits": len(res["canary_hits"]),
                "spec_derived_paths": len(res["spec_derived_paths"]),
                "path_anomalies": res.get("path_anomalies", []),
+               "new_path_anomalies": res.get("new_path_anomalies", []),
                "deny_entries": deny["count"],
                "new_alerts": res.get("new_alerts", len(flagged)),
                "deny_skipped": len(deny["skipped"]),

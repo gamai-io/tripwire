@@ -1,0 +1,10 @@
+# Apply the deny list written by tripwire-watch.service, as root, only on change.
+# Started by tripwire-apply.path. A bad list never survives: nginx -t runs with
+# the new file in place and the previous file is restored if it fails.
+[Unit]
+Description=Tripwire: apply the deny list to nginx
+After=nginx.service tripwire-watch.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/tripwire-apply-nginx.sh

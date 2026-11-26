@@ -1,5 +1,13 @@
 # Run the detector over the access log every minute.
-# Install: cp tripwire-watch.* /etc/systemd/system/ && systemctl enable --now tripwire-watch.timer
+# Install:
+#   install -m 0755 packaging/tripwire-apply-nginx.sh /usr/local/sbin/
+#   cp packaging/tripwire-watch.* packaging/tripwire-apply.* /etc/systemd/system/
+#   systemctl daemon-reload && systemctl enable --now tripwire-watch.timer tripwire-apply.path
+#
+# Two units on purpose: this one is unprivileged, writes the list into
+# /var/lib/tripwire, and never touches nginx. tripwire-apply.service (root,
+# oneshot) copies the list into place only when the file changes, tests the
+# config and rolls back if nginx -t fails.
 [Unit]
 Description=Tripwire: score inbound agent behaviour
 After=network.target nginx.service
@@ -8,15 +16,22 @@ After=network.target nginx.service
 Type=oneshot
 User=tripwire
 Group=tripwire
+# nginx logs are commonly 0640 root:adm (or www-data:adm); without this the unit
+# exits 3 every minute and never reads a line
+SupplementaryGroups=adm
 # The window is the memory: one minute of cadence, ten minutes of window.
+# --registry is intentionally absent; a missing registry is refused (exit 4),
+# so pass it only once the file exists.
 ExecStart=/usr/local/bin/tripwire watch \
   --log /var/log/nginx/access.log \
-  --registry /etc/tripwire/canaries.json \
   --state /var/lib/tripwire/state.json \
+  --state-ttl 3600 \
   --ledger /var/lib/tripwire/alerts.jsonl \
-  --deny-map /etc/nginx/conf.d/tripwire-deny.conf \
+  --baseline /var/lib/tripwire/baseline.json \
+  --baseline-floor 10 \
+  --exceptions /etc/tripwire/exceptions.json \
+  --deny-map /var/lib/tripwire/deny.conf \
   --deny-json /var/lib/tripwire/deny.json \
-  --reload-cmd "/usr/sbin/nginx -t && /usr/sbin/nginx -s reload" \
   --min-level medium --deny-max 1000
 # 0 = nothing found, 1 = findings. Both are a successful run.
 SuccessExitStatus=0 1

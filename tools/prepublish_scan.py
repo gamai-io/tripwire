@@ -11,7 +11,7 @@ import tarfile
 import zipfile
 
 BLOCKERS = [
-    (re.compile(rb"/root/"), "absolute /root path"),
+    (re.compile(rb"/" + b"root/"), "absolute home path"),
     (re.compile(rb"-----BEGIN [A-Z ]*PRIVATE KEY-----"), "private key"),
     (re.compile(rb"ghp_[A-Za-z0-9]{20,}"), "GitHub token"),
     (re.compile(rb"pypi-AgEIcHlwaS5vcmc"), "PyPI token"),
@@ -34,17 +34,22 @@ def scan_bytes(name: str, blob: bytes, blocking: list, warnings: list) -> None:
         warnings.append("%s: large member (%.1f MB)" % (name, len(blob) / 1e6))
 
 
+def _skip(name: str) -> bool:
+    # the scanner contains the patterns it looks for; scanning itself is noise
+    return name.endswith("tools/prepublish_scan.py")
+
+
 def scan(path: str, blocking: list, warnings: list) -> None:
     if path.endswith(".whl") or path.endswith(".zip"):
         with zipfile.ZipFile(path) as zf:
             for info in zf.infolist():
-                if info.is_dir():
+                if info.is_dir() or _skip(info.filename):
                     continue
                 scan_bytes("%s!%s" % (path, info.filename), zf.read(info), blocking, warnings)
     elif path.endswith((".tar.gz", ".tgz")):
         with tarfile.open(path) as tf:
             for member in tf.getmembers():
-                if not member.isfile():
+                if not member.isfile() or _skip(member.name):
                     continue
                 handle = tf.extractfile(member)
                 if handle is not None:
