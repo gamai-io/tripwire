@@ -376,7 +376,7 @@ def watch_stream(log_path: str, registry: dict | None = None, window: int = 600,
     latest = 0.0
     last_ts = float("-inf")
     max_sources = max(1, int(max_sources))
-    wall = time.time()
+    moment = float(now) if now is not None else time.time()
     since_analysis = 0
     rows_seen: list[dict] = []
     stream_canaries: list[dict] = []
@@ -417,7 +417,7 @@ def watch_stream(log_path: str, registry: dict | None = None, window: int = 600,
         if ts is None:
             skipped += 1
             continue
-        if ts > wall + 60:            # clock skew or a poisoned collector
+        if ts > moment + 60:          # clock skew or a poisoned collector
             future += 1
             skipped += 1
             continue
@@ -463,22 +463,38 @@ def watch_stream(log_path: str, registry: dict | None = None, window: int = 600,
                 "bad_timestamps": read_stats.get("bad_timestamps", 0),
                 "duplicate_keys": read_stats.get("duplicate_keys", 0),
                 "path_anomalies": [], "now": latest}
-    canary_hits.extend(stream_canaries)
     # lines the reader refused (oversize, duplicate keys, bad timestamps) are
     # part of the skipped total: a run that hid them would look cleaner than it is
     skipped += int(read_stats.get("skipped") or 0)
     for hit in stream_canaries:
-        session = merged.get(str(hit["ip"]))
+        ip = str(hit["ip"])
+        if ip not in merged and len(merged) >= max_sources:
+            # a canary outside the window still must not push the run past the cap
+            overflow += 1
+            continue
+        canary_hits.append(hit)
+        session = merged.get(ip)
         if session is None:
-            session = merged[str(hit["ip"])] = {"points": 10, "level": "critical",
-                                                "findings": [], "requests": 0,
-                                                "first_ts": hit.get("ts"),
-                                                "last_ts": hit.get("ts")}
+            session = merged[ip] = {"points": 10, "level": "critical",
+                                    "findings": [], "requests": 0,
+                                    "first_ts": hit.get("ts"),
+                                    "last_ts": hit.get("ts")}
         session.setdefault("findings", []).append({
             "rule": "canary_used", "points": 10,
             "detail": "planted key %s used on %s" % (hit["canary"], hit["path"])})
         session["points"] = max(int(session.get("points") or 0), 10)
         session["level"] = "critical"
+    if overflow:
+        return {"window_s": window, "sources": len(merged), "rows": total,
+                "skipped_lines": skipped, "future_rows": future, "empty": total == 0,
+                "stream": True, "chunk": chunk, "rows_in_window": len(kept),
+                "canary_hits": canary_hits, "sessions": merged,
+                "flagged": 0, "error": "too many distinct sources (>%d); "
+                "refusing to report a partial analysis" % max_sources,
+                "oversize_lines": read_stats.get("oversize", 0),
+                "bad_timestamps": read_stats.get("bad_timestamps", 0),
+                "duplicate_keys": read_stats.get("duplicate_keys", 0),
+                "path_anomalies": [], "now": latest}
     rows = rows_seen if baseline_path else []
     result = {"window_s": window, "sources": len(merged), "rows": total,
               "skipped_lines": skipped, "future_rows": future, "empty": total == 0,
@@ -634,6 +650,13 @@ def watch(log_path: str, registry: dict | None = None, window: int = 600,
         # a single future-dated line must not blind the whole run
         now = min(max(float(r.get("ts") or 0) for r in rows) + 1, time.time() + 60)
     result = analyse(rows, registry, window, now=now)
+    if len(result.get("sessions") or {}) > max(1, int(max_sources)):
+        result["error"] = ("too many distinct sources (>%d); refusing to report a "
+                           "partial analysis" % max_sources)
+        result["sources"] = len(result.get("sessions") or {})
+        result["rows"] = len(rows)
+        result["now"] = now
+        return result
     in_window = [r for r in rows
                  if (window <= 0 or now - float(r.get("ts") or 0) <= window)
                  and float(r.get("ts") or 0) <= now + 300]
@@ -648,10 +671,6 @@ def watch(log_path: str, registry: dict | None = None, window: int = 600,
     result["log_format"] = stats.get("format")
     result["empty"] = not rows
     result["now"] = now
-    if len(result.get("sessions") or {}) > max(1, int(max_sources)):
-        result["error"] = ("too many distinct sources (>%d); refusing to report a "
-                           "partial analysis" % max_sources)
-        return result
     if exceptions:
         result = apply_exceptions(result, exceptions, now=now)
     _drop_excepted_paths(result)
@@ -1013,7 +1032,7 @@ def deny_list(result: dict, min_level: str = "medium", now: float | None = None,
                         ",".join(entry["rules"]), _clean(entry.get("reason"))))
         lines.append("deny %s;" % entry["ip"])
     for item in skipped:
-        lines.append("# skipped %s (%s)" % (item["ip"], item["why"]))
+        lines.append("# skipped %s (%s)" % (item["ip"], _clean(item.get("why"))))
     return {"entries": list(merged.values()), "count": len(merged), "skipped": skipped,
             "nginx": "\n".join(lines) + "\n",
             "json": {"generated": int(moment), "ttl_s": ttl_s,
@@ -1034,27 +1053,60 @@ def read_deny_json(path: str) -> dict:
     return out
 
 
+def _acquire_lock(path: str):
+    """Serialise read-merge-write across processes; a lost update drops a block."""
+    if not path:
+        return None
+    try:
+        import fcntl
+    except ImportError:          # Windows: no flock; the timer is single writer there
+        return None
+    try:
+        handle = open(path + ".lock", "a+")
+        fcntl.flock(handle, fcntl.LOCK_EX)
+        return handle
+    except OSError:
+        return None
+
+
+def _release_lock(handle) -> None:
+    if handle is None:
+        return
+    try:
+        import fcntl
+        fcntl.flock(handle, fcntl.LOCK_UN)
+    except (ImportError, OSError):
+        pass
+    try:
+        handle.close()
+    except OSError:
+        pass
+
+
 def write_deny_files(result: dict, map_path: str | None, json_path: str | None,
                      **kwargs) -> dict:
-    """Merge with whatever is on disk, then replace it atomically."""
-    previous = read_deny_map(map_path or "") if map_path else {}
-    if not previous and json_path:
-        previous = read_deny_json(json_path)
-    out = deny_list(result, previous=previous, **kwargs)
-    if out.get("error"):
-        return out
-    old = ""
-    if map_path and os.path.exists(map_path):
-        try:
-            old = open(map_path, encoding="utf-8").read()
-        except OSError:
-            old = ""
-    out["changed"] = old != out["nginx"]
-    # stage every file first, then replace: if the JSON write fails, the deny
-    # map must not already have been swapped in (the apply unit watches it)
-    staged = []
+    """Merge with what is on disk under a lock, then replace atomically.
+
+    The map is the source of truth (the apply unit watches it); the JSON copy is
+    written after it and its failure is reported, not treated as a refusal.
+    """
+    lock = _acquire_lock(map_path or json_path or "")
+    staged: list[tuple[str, str]] = []
     try:
-        for path, payload in ((json_path, None), (map_path, out["nginx"])):
+        previous = read_deny_map(map_path or "") if map_path else {}
+        if not previous and json_path:
+            previous = read_deny_json(json_path)
+        out = deny_list(result, previous=previous, **kwargs)
+        if out.get("error"):
+            return out
+        old = ""
+        if map_path and os.path.exists(map_path):
+            try:
+                old = open(map_path, encoding="utf-8").read()
+            except OSError:
+                old = ""
+        out["changed"] = old != out["nginx"]
+        for path, payload in ((map_path, out["nginx"]), (json_path, None)):
             if not path:
                 continue
             directory = os.path.dirname(os.path.abspath(path))
@@ -1067,8 +1119,17 @@ def write_deny_files(result: dict, map_path: str | None, json_path: str | None,
                 else:
                     fh.write(payload)
             staged.append((tmp, path))
-        for tmp, path in staged:
-            os.replace(tmp, path)
+        # map first: if it lands, the apply unit may consume a complete file
+        if map_path:
+            os.replace(staged[0][0], staged[0][1])
+            staged.pop(0)
+        if json_path and staged:
+            try:
+                os.replace(staged[0][0], staged[0][1])
+                staged.pop(0)
+            except OSError as exc:
+                out["json_error"] = str(exc)
+        return out
     except OSError as exc:
         for tmp, _path in staged:
             try:
@@ -1076,6 +1137,13 @@ def write_deny_files(result: dict, map_path: str | None, json_path: str | None,
             except OSError:
                 pass
         return {"error": "deny list write failed: %s" % exc, "entries": [],
-                "count": 0, "skipped": out.get("skipped") or [],
-                "nginx": "", "json": {}, "changed": False}
-    return out
+                "count": 0, "skipped": [], "nginx": "", "json": {},
+                "changed": False}
+    finally:
+        for tmp, _path in staged:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+        _release_lock(lock)
+

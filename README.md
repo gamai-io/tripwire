@@ -214,7 +214,10 @@ next paragraph exists.
 tripwire watch --log access.log --stream --window 600 --chunk 200000
 ```
 
-**A source-rotating flood is refused, not half-scored.** `--max-sources`
+**A source-rotating flood is refused, not half-scored.** The deny list is validated by `nginx -t` in the test suite
+(`tests/test_nginx.py`). Rebuilds are reproducible: `docs/REPRODUCIBLE.md`.
+
+`--max-sources`
 (default 200,000) is the point where a window cannot be scored honestly: the run
 stops, writes nothing to the ledger, and exits **3** with `TooManySources` instead
 of dropping the excess and reporting "clean". Raise it only with the RAM to match.
@@ -249,7 +252,7 @@ and what is deliberately missing are in
 python -m pytest -q tests/
 ```
 
-143 tests: the reported timeline scores **high** with all four decisive rules; a
+153 tests: the reported timeline scores **high** with all four decisive rules; a
 canary in the same log is **critical**; a developer switching to `curl` stays
 **low**; a doc reader without a failed check is suppressed; one document unlocks
 one path; a redirect-heavy scan is caught without any 4xx; a search bot is not a

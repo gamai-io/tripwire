@@ -99,7 +99,7 @@ def sane_epoch(value) -> bool:
     """
     try:
         ts = float(value)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         return False
     if ts != ts:                      # NaN
         return False

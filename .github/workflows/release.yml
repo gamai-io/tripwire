@@ -31,8 +31,11 @@ jobs:
         run: python3 tools/claims.py --check
       - name: Tests
         run: python -m pytest -q tests/
-      - name: Build
-        run: python -m build
+      - name: Build (reproducible)
+        run: |
+          export SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)
+          python -m build
+          python3 tools/normalize_sdist.py dist/*.tar.gz
       - name: Twine check
         run: twine check dist/*
       - name: Pre-publish scan (no secrets, no internal paths)

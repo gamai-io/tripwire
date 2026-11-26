@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.8.12 — 2026-11-26
+- **RT5 fixes.** A canary outside the window can no longer push the run past
+  `--max-sources`; a refused batch run no longer updates the baseline; `--stream`
+  honours `--now` for future rows; an exception approver with a newline cannot
+  inject nginx directives; deny writes are serialised with `flock` (two writers
+  no longer lose an entry) and the map is replaced before the JSON copy (a failed
+  map replace leaves both untouched); an unrepresentable numeric timestamp no
+  longer raises `OverflowError`.
+- **Reproducible artifacts.** Pinned `setuptools==78.1.0`, `SOURCE_DATE_EPOCH` in
+  the release build, sdist header normalisation and `tools/verify_pypi.py` to
+  compare a rebuild with PyPI byte-for-byte; CI builds twice and compares wheel
+  and sdist.
+- **The deny list is parsed by a real nginx in CI.** `tests/test_nginx.py` wraps
+  the generated file in an nginx config and runs `nginx -t` (skipped when nginx is
+  absent; the CI 3.12 job installs nginx-light).
+
 ## 0.8.11 — 2026-11-26
 - The claims gate ran the suite twice per README match, so a transient pytest
   failure produced "claims 143 tests, suite has 143 passing" and failed CI. It now
