@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.3 — 2026-11-26
+- The claims gate now requires a test count in README (a missing anchor passed
+  silently) and compares it against **passing** tests.
+- `CLAIMS.md` is generated from a fresh corpus run instead of hardcoded numbers:
+  it previously said 0/300, 45/60, 60/60 while the corpus had grown to 360/80.
+
 ## 0.8.2 — 2026-11-26
 - **The ledger only gets what the operator asked for.** `watch --min-level` now
   filters the alerts that are written (a `--min-level high` run no longer writes

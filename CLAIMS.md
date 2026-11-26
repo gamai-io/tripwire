@@ -2,11 +2,12 @@
 
 | claim | value | command |
 |---|---|---|
-| version | 0.8.0 | `python3 tools/claims.py --version` |
-| tests | 93 | `python3 -m pytest -q tests/` |
-| benign sessions flagged | 0 / 300 | `python3 tools/gen_corpus.py --out corpus && python3 tools/measure.py --corpus corpus` |
-| attacks at high | 45 / 60 | same command |
-| attacks at medium+ | 60 / 60 | same command |
+| version | 0.8.3 | `python3 tools/claims.py --version` |
+| tests collected | 100 | `python3 -m pytest -q --collect-only tests/` |
+| tests passing | 100 | `python3 -m pytest -q tests/` |
+| benign sessions flagged | 0 / 360 | `python3 tools/gen_corpus.py --out corpus --benign 360 --attack 80 && python3 tools/measure.py --corpus corpus` |
+| attacks at high | 64 / 80 | same command |
+| attacks at medium+ | 80 / 80 | same command |
 
 ## Not proven here
 
