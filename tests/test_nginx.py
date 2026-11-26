@@ -14,7 +14,8 @@ import unittest
 from tripwire import detect
 
 BASE = 1_795_560_000.0
-NGINX = shutil.which("nginx")
+NGINX = shutil.which("nginx") or (
+    "/usr/sbin/nginx" if os.path.exists("/usr/sbin/nginx") else None)
 
 
 @unittest.skipUnless(NGINX, "nginx is not installed")
