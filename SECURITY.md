@@ -20,7 +20,7 @@ otherwise.
 | version source | `pyproject.toml` + `tripwire/__init__.py` (both must match) |
 | build | GitHub Actions `release.yml` on tag `v*` |
 | upload | `pypa/gh-action-pypi-publish` with **OIDC trusted publishing** (`id-token: write`) |
-| provenance | the publish step creates PEP 740 attestations; `attest.yml` also builds them |
+| provenance | the publish step creates PEP 740 attestations (`attestations: true`) |
 | scan before upload | `tools/prepublish_scan.py` refuses private keys, tokens and absolute home-directory paths |
 
 There is **no long-lived PyPI API token** for this project. GitHub mints a
@@ -30,7 +30,7 @@ the file. Verify one with:
 
 ```bash
 curl -s -o /dev/null -w '%{http_code}\n' \
-  https://pypi.org/integrity/gamai-tripwire/0.8.6/gamai_tripwire-0.8.6-py3-none-any.whl/provenance
+  https://pypi.org/integrity/gamai-tripwire/0.8.8/gamai_tripwire-0.8.8-py3-none-any.whl/provenance
 # 200
 ```
 

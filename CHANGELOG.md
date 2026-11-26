@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.9 — 2026-11-26
+- Docs: the bot-UA exemption is described as it now works (a source loses it once
+  it fails auth); the provenance example points at the current release.
+- Supply chain: Actions pinned by commit SHA, the pre-publish secret scan runs
+  before upload, and the duplicate `attest.yml` is gone (the publish step creates
+  the PEP 740 attestation from the same build).
+- Release workflow: no `skip-existing`, so a force-moved tag fails instead of
+  leaving PyPI behind while GitHub gets new files.
+
 ## 0.8.8 — 2026-11-26
 Fourth review (RT4) plus the remaining low items from RT3.
 

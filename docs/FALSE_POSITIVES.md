@@ -105,7 +105,9 @@ All four changes came from corpus runs, not from taste.
 | one document unlocks **one** path | before, a single request to a doc-ish path made every new path in the next 60 s "spec-derived"; a scanner walking 300 paths produced ~300 findings. The incident shape is one document → one followed link. |
 | failed document fetch does **not** unlock | a `403` on `/docs/api.md` is not a document we served, so nothing can be derived from it. |
 | `key_across_addresses` added | the one evasion that beat every per-address rule: the same credential from 8 addresses scored **nothing**. It now scores 6 when 6+ addresses or 20+ rejections; a *working* key shared by 4 egress addresses stays low because the rule also needs the failures. |
-| `path_burst` added (40 paths/min, status-independent) | a scanner behind a redirect-heavy vhost answers `301` to everything and scored 1 point on this server's own log. Search crawlers are excluded by user agent, so the corpus `crawler` family stays at 0 false positives. |
+| `path_burst` added (40 paths/min, status-independent) | a scanner behind a redirect-heavy vhost answers `301` to everything and scored 1 point on this server's own log. Search crawlers are exempt by user agent only while that source has no 401/403
+in the window (a real crawler does not fail auth), so the corpus `crawler` family
+stays at 0 false positives and a spoofed `Googlebot` does not get a free pass. |
 | the window is measured against the file, not the clock | `--window 600` on a log from yesterday produced `0 sources, 0 flagged, exit 0` — a clean bill of health for a file that was never read. The default `now` is now the newest row; an empty file exits 3. |
 | a canary opens its own case | a canary hit whose row fell outside the window was counted in `canary_hits` but produced no session, so `flagged` stayed 0. The hit now synthesises a session at `critical`. |
 | timezone from `timegm`, not `mktime` | `mktime` shifted every parsed line by the host's UTC offset (1 h here, 2 h across DST) and silently moved rows in and out of the window. |
