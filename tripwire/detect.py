@@ -26,8 +26,6 @@ from __future__ import annotations
 
 import ipaddress
 import json
-
-from .strictjson import StrictJSONError, load_strict
 import os
 import re
 import sys
@@ -42,6 +40,7 @@ from mandate.core import append_receipt
 from . import baseline as baseline_mod
 from . import canary as canary_mod
 from . import logread
+from .strictjson import StrictJSONError, load_strict
 
 SPEC_TOKENS = ("/openapi", "/swagger", "/docs", ".md", "/spec", "/redoc")
 DOC_RULES = {"docs_link_follow", "spec_derived_novel_path"}

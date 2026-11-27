@@ -1,7 +1,6 @@
 """State, baseline and canary files are read back into decisions; refuse ambiguity."""
 from __future__ import annotations
 
-import json
 import os
 import pathlib
 import tempfile

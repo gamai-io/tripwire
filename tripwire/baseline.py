@@ -12,11 +12,11 @@ is how a detector blocks a CDN.
 from __future__ import annotations
 
 import json
-
-from .strictjson import StrictJSONError, load_strict
 import os
 import re
 import tempfile
+
+from .strictjson import StrictJSONError, load_strict
 
 SKIP_SUFFIXES = (".js", ".css", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico",
                  ".woff", ".woff2", ".map", ".txt", ".xml")
