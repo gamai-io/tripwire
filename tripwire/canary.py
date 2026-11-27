@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+
+from .strictjson import StrictJSONError, loads_strict
 import os
 import secrets
 import time
@@ -44,8 +46,8 @@ def load(path: str = "canaries.json", strict: bool = False) -> dict:
             raw = fh.read()
         if not raw.strip():
             return {"version": 1, "canaries": []}   # a freshly created file
-        data = json.loads(raw)
-    except ValueError as exc:
+        data = loads_strict(raw)
+    except (ValueError, StrictJSONError) as exc:
         if strict:
             raise RegistryError("%s is not valid JSON: %s" % (path, exc)) from exc
         return {"version": 1, "canaries": []}

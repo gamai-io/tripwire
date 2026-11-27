@@ -26,6 +26,8 @@ from __future__ import annotations
 
 import ipaddress
 import json
+
+from .strictjson import StrictJSONError, load_strict
 import os
 import re
 import sys
@@ -787,10 +789,10 @@ def mark_state(result: dict, state_path: str, ttl_s: int = 3600,
     state = {"version": 1, "alerts": {}, "paths": {}}
     if os.path.exists(state_path):
         try:
-            loaded = json.load(open(state_path, encoding="utf-8"))
+            loaded = load_strict(state_path)
             if isinstance(loaded, dict):
                 state.update(loaded)
-        except ValueError:
+        except (ValueError, StrictJSONError):
             pass
     alerts = state.setdefault("alerts", {})
     paths = state.setdefault("paths", {})

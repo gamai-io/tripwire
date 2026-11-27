@@ -1,4 +1,14 @@
 # Changelog
+## 0.8.16 — 2026-11-27
+
+### Security
+- **State, baseline and canary files are parsed strictly.** These files are read back into
+  detection decisions, so a document that two JSON parsers read differently ("{"a":1,"a":2}")
+  could change what is considered new or already-seen. Duplicate keys, `NaN`/`Infinity`,
+  integers beyond 2^53−1, lone surrogates, nesting deeper than 128 and non-UTF-8 bytes are
+  now refused (`tripwire/strictjson.py`); a bad state file falls back to empty exactly as a
+  corrupt one did before, and a `--strict` canary registry raises. 6 new tests; suite 165 → 171.
+
 
 ## 0.8.15 — 2026-11-26
 - **A redacted real-log regression corpus.** `tools/redact_corpus.py` keeps the

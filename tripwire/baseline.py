@@ -12,6 +12,8 @@ is how a detector blocks a CDN.
 from __future__ import annotations
 
 import json
+
+from .strictjson import StrictJSONError, load_strict
 import os
 import re
 import tempfile
@@ -36,8 +38,8 @@ def load(path: str) -> dict:
     if not path or not os.path.exists(path):
         return {"version": 1, "paths": {}, "samples": 0}
     try:
-        data = json.load(open(path, encoding="utf-8"))
-    except (OSError, ValueError):
+        data = load_strict(path)
+    except (OSError, StrictJSONError):
         return {"version": 1, "paths": {}, "samples": 0}
     if not isinstance(data, dict) or not isinstance(data.get("paths"), dict):
         return {"version": 1, "paths": {}, "samples": 0}
