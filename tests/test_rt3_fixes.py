@@ -117,6 +117,26 @@ class CliForwardsItsFlags(unittest.TestCase):
             self.assertEqual(open(marker).read().count("x"), 1,
                              "nginx was reloaded for an unchanged list")
 
+    def test_reload_happens_when_the_address_set_changes(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            log = os.path.join(td, "a.jsonl")
+            deny = os.path.join(td, "deny.conf")
+            marker = os.path.join(td, "reloads")
+            identity_log(log)
+            cmd = "echo x >> %s" % marker
+            run_cli("watch", "--log", log, "--deny-map", deny, "--reload-cmd", cmd)
+            self.assertEqual(open(marker).read().count("x"), 1)
+            # a second address with the same identity evidence must trigger the reload
+            import json as _json
+            template = _json.loads(open(log, encoding="utf-8").read().splitlines()[0])
+            with open(log, "a", encoding="utf-8") as fh:
+                for i in range(6):
+                    entry = dict(template, ip="9.9.9.9", ts=template.get("ts", 0) + i)
+                    fh.write(_json.dumps(entry) + "\n")
+            run_cli("watch", "--log", log, "--deny-map", deny, "--reload-cmd", cmd)
+            self.assertEqual(open(marker).read().count("x"), 2,
+                             "a new blocked address did not trigger a reload")
+
 
 class CliRefusals(unittest.TestCase):
     def test_deny_cap_is_a_refusal_not_a_traceback(self) -> None:

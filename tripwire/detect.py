@@ -1106,7 +1106,14 @@ def write_deny_files(result: dict, map_path: str | None, json_path: str | None,
                 old = open(map_path, encoding="utf-8").read()
             except OSError:
                 old = ""
-        out["changed"] = old != out["nginx"]
+        # "changed" means the set of blocked addresses changed; the file itself also
+        # carries a timestamp and per-entry expiry, which move every second. Comparing
+        # raw text reloaded nginx on every run (and made the test pass by luck within
+        # one second).
+        def _blocked(text):
+            return {line.split()[1].rstrip(";") for line in (text or "").splitlines()
+                    if line.startswith("deny ")}
+        out["changed"] = _blocked(old) != _blocked(out.get("nginx", ""))
         for path, payload in ((map_path, out["nginx"]), (json_path, None)):
             if not path:
                 continue
